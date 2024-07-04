@@ -1,0 +1,149 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: ort-server
+    component: core
+  name: ort-server-core
+  namespace: ort-server
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+    - name: metrics
+      port: 9108
+      targetPort: 9108
+  selector:
+    app: ort-server
+    component: core
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ort-server-api-ingress
+  namespace: ort-server
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: api.ort
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: ort-server-core
+                port:
+                  number: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ort-server-core
+  namespace: ort-server
+  labels:
+    app: ort-server
+    component: core
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ort-server
+      component: core
+  template:
+    metadata:
+      labels:
+        app: ort-server
+        component: core
+    spec:
+      volumes:
+        - name: ort-core-secret-volume
+          configMap:
+            name: ort-core-secrets
+      containers:
+        - name: ort-server
+          image: core
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: ort-core-secret-volume
+              mountPath: /mnt/secrets/
+              readOnly: true
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "1"
+          env:
+            - name: PUBLIC_SCHEME
+              value: "http"
+            - name: PUBLIC_FQDN
+              value: "localhost"
+            - name: PUBLIC_PORT
+              value: "18080"
+            - name: PORT
+              value: "8080"
+            - name: UI_HOSTS
+              value: "localhost:18082,localhost:5173"
+            - name: DB_HOST
+              value: postgresql
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: ort
+            - name: DB_SCHEMA
+              value: public
+            - name: DB_USERNAME
+              value: postgres
+            - name: DB_PASSWORD
+              value: postgres
+            - name: DB_SSL_MODE
+              value: disable
+            - name: JWT_URI
+              value: http://keycloak.ort-server.svc.cluster.local/realms/ort-server/protocol/openid-connect/certs
+            - name: JWT_ISSUER
+              value: http://localhost:18081/realms/ort-server
+            - name: JWT_REALM
+              value: ort-server
+            - name: KEYCLOAK_ACCESS_TOKEN_URL
+              value: http://keycloak.ort-server.svc.cluster.local/realms/ort-server/protocol/openid-connect/token
+            - name: KEYCLOAK_API_URL
+              value: http://keycloak.ort-server.svc.cluster.local/admin/realms/ort-server
+            - name: KEYCLOAK_API_USER
+              value: "admin" # set to override the default value, needed so ORT Server uses client_credentials instead of password grant
+            - name: KEYCLOAK_API_SECRET
+              value: admin
+            - name: ORCHESTRATOR_SENDER_TRANSPORT_TYPE
+              value: "rabbitMQ"
+            - name: ORCHESTRATOR_SENDER_TRANSPORT_SERVER_URI
+              value: "amqp://rabbitmq-headless.ort-server.svc.cluster.local:5672"
+            - name: ORCHESTRATOR_SENDER_TRANSPORT_QUEUE_NAME
+              value: orchestrator_queue
+            - name: CORE_SECRET_PROVIDER # this is where core gets SQS credentials from
+              value: secret-file
+            - name: CORE_SECRET_FILES
+              value: /mnt/secrets/secrets.properties
+            - name: ALLOW_SECRETS_FROM_CONFIG
+              value: "true"
+            - name: SECRETS_PROVIDER_NAME # this is where core stores secrets from users (e.g. github tokens)
+              value: scaleway
+            - name: GRAPHITE_HOST
+              value: graphite
+            - name: GRAPHITE_PORT
+              value: "2003"
+            - name: GRAPHITE_PROTOCOL
+              value: PLAINTEXT
+             
+          livenessProbe:
+             failureThreshold: 6
+             httpGet:
+               path: /api/v1/liveness
+               port: 8080
+               scheme: HTTP
+             periodSeconds: 10
+             successThreshold: 1
+             timeoutSeconds: 5

@@ -1,0 +1,211 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: orchestrator
+  namespace: ort-server
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: ort-server
+  name: orchestrator-job-creator
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["create"]
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ort-server-secret-configmap
+  namespace: ort-server
+data:
+  secrets: |
+    rabbitMqUser=admin
+    rabbitMqPassword=admin
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: orchestrator-job-creator-binding
+  namespace: ort-server
+subjects:
+  - kind: ServiceAccount
+    name: orchestrator
+    namespace: ort-server
+roleRef:
+  kind: Role
+  name: orchestrator-job-creator
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ort-server-orchestrator
+  namespace: ort-server
+  labels:
+    app: ort-server
+    component: orchestrator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ort-server
+      component: orchestrator
+  template:
+    metadata:
+      labels:
+        app: ort-server
+        component: orchestrator
+    spec:
+      serviceAccountName: orchestrator
+      volumes:
+        - name: ort-worker-secret-volume
+          configMap: 
+            name: ort-server-secret-configmap
+      containers:
+        - name: ort-server
+          image: "ort-server-orchestrator"
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: ort-worker-secret-volume
+              mountPath: /mnt/secrets
+              subPath: secrets
+              readOnly: true
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "1"
+          env:
+            - name: PORT
+              value: "8080"
+            - name: DB_HOST
+              value: "postgresql"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: ort
+            - name: DB_SCHEMA
+              value: public
+            - name: DB_USERNAME
+              value: postgres
+            - name: DB_PASSWORD
+              value: postgres
+            - name: DB_SSL_MODE
+              value: disable
+            - name: ORCHESTRATOR_SECRET_PROVIDER
+              value: secret-file
+            - name: ORCHESTRATOR_SECRET_FILES
+              value: /mnt/secrets
+            - name: ORCHESTRATOR_RECEIVER_TRANSPORT_TYPE
+              value: "rabbitMQ"
+            - name: ORCHESTRATOR_RECEIVER_TRANSPORT_SERVER_URI
+              value: "amqp://rabbitmq-headless.ort-server.svc.cluster.local:5672"
+            - name: ORCHESTRATOR_RECEIVER_TRANSPORT_QUEUE_NAME
+              value: orchestrator_queue
+            # The secrets provider is only needed by the workers. Added here so it gets passed to the jobs created by
+            # orchestrator.
+            - name: SECRETS_PROVIDER_NAME
+              value: scaleway
+            # This is the queue configuration for communicating back from the workers to the orchestrator.
+            - name: ORCHESTRATOR_SENDER_TRANSPORT_TYPE
+              value: "rabbitMQ"
+            - name: ORCHESTRATOR_SENDER_TRANSPORT_SERVER_URI
+              value: "amqp://rabbitmq-headless.ort-server.svc.cluster.local:5672"
+            - name: ORCHESTRATOR_SENDER_TRANSPORT_QUEUE_NAME
+              value: orchestrator_queue
+            # ADVISOR
+            - name: ADVISOR_SENDER_TRANSPORT_TYPE
+              value: "kubernetes"
+            - name: ADVISOR_SENDER_TRANSPORT_IMAGE_PULL_POLICY
+              value: "IfNotPresent"
+            - name: ADVISOR_MOUNT_SECRETS
+              value: "ort-core-secrets->/mnt/secrets"
+            # This is where advisor reads SQS credentials fromm in order to communicate back to orchestrator. "ADVISOR_"
+            # is duplicated because orchestrator removes the prefix if it is the name of the endpoint, before forwarding
+            # environment variables.
+            - name: ADVISOR_ADVISOR_SECRET_PROVIDER
+              value: secret-file
+            - name: ADVISOR_ADVISOR_SECRET_FILES
+              value: /mnt/secrets/secrets.properties
+            # ANALYZER
+            - name: ANALYZER_SENDER_TRANSPORT_TYPE
+              value: "kubernetes"
+            - name: ANALYZER_SENDER_TRANSPORT_IMAGE_PULL_POLICY
+              value: "IfNotPresent"
+            - name: ANALYZER_MOUNT_SECRETS
+              value: "ort-core-secrets->/mnt/secrets"
+            - name: ANALYZER_ANALYZER_SECRET_PROVIDER
+              value: secret-file
+            - name: ANALYZER_ANALYZER_SECRET_FILES
+              value: /mnt/secrets/secrets.properties
+            # CONFIG
+            - name: CONFIG_SENDER_TRANSPORT_TYPE
+              value: "kubernetes"
+            - name: CONFIG_SENDER_TRANSPORT_IMAGE_PULL_POLICY
+              value: "IfNotPresent"
+            - name: CONFIG_MOUNT_SECRETS
+              value: "ort-core-secrets->/mnt/secrets ort-config-secret->/mnt/config"
+            - name: CONFIG_CONFIG_SECRET_PROVIDER
+              value: secret-file
+            - name: CONFIG_CONFIG_SECRET_FILES
+              value: /mnt/secrets/secrets.properties
+            - name: CONFIG_CONFIG_CONFIG_FILE_PROVIDER
+              value: local-config
+            - name: CONFIG_CONFIG_CONFIG_LOCAL_CONFIG_DIR
+              value: /mnt/config
+            # EVALUATOR
+            - name: EVALUATOR_SENDER_TRANSPORT_TYPE
+              value: "kubernetes"
+            - name: EVALUATOR_SENDER_TRANSPORT_IMAGE_PULL_POLICY
+              value: "IfNotPresent"
+            - name: EVALUATOR_MOUNT_SECRETS
+              value: "ort-core-secrets->/mnt/secrets|secrets worker-config->/mnt/config"
+            - name: EVALUATOR_EVALUATOR_SECRET_PROVIDER
+              value: secret-file
+            - name: EVALUATOR_EVALUATOR_SECRET_FILES
+              value: /mnt/secrets/secrets.properties
+            - name: EVALUATOR_EVALUATOR_CONFIG_FILE_PROVIDER
+              value: local-config
+            - name: EVALUATOR_EVALUATOR_CONFIG_LOCAL_CONFIG_DIR
+              value: /mnt/config
+            # REPORTER
+            - name: REPORTER_SENDER_TRANSPORT_TYPE
+              value: "kubernetes"
+            - name: REPORTER_SENDER_TRANSPORT_IMAGE_PULL_POLICY
+              value: "IfNotPresent"
+            - name: REPORTER_MOUNT_SECRETS
+              value: "ort-core-secrets->/mnt/secrets"
+            - name: REPORTER_REPORTER_SECRET_PROVIDER
+              value: secret-file
+            - name: REPORTER_REPORTER_SECRET_FILES
+              value: /mnt/secrets/secrets.properties
+            # SCANNER
+            - name: SCANNER_SENDER_TRANSPORT_TYPE
+              value: "kubernetes"
+            - name: SCANNER_SENDER_TRANSPORT_IMAGE_PULL_POLICY
+              value: "IfNotPresent"
+            - name: SCANNER_MOUNT_SECRETS
+              value: "ort-core-secrets->/mnt/secrets|secrets"
+            - name: SCANNER_SCANNER_SECRET_PROVIDER
+              value: secret-file
+            - name: SCANNER_SCANNER_SECRET_FILES
+              value: /mnt/secrets/secrets.properties
+            - name: ADVISOR_SENDER_TRANSPORT_IMAGE_NAME
+              value: advisor-worker-image
+            - name: ANALYZER_SENDER_TRANSPORT_IMAGE_NAME
+              value: analyzer-worker-image
+            - name: CONFIG_SENDER_TRANSPORT_IMAGE_NAME
+              value: config-worker-image
+            - name: EVALUATOR_SENDER_TRANSPORT_IMAGE_NAME
+              value: evaluator-worker-image
+            - name: REPORTER_SENDER_TRANSPORT_IMAGE_NAME
+              value: reporter-worker-image
+            - name: SCANNER_SENDER_TRANSPORT_IMAGE_NAME
+              value: scanner-worker-image
+            - name: NOTIFIER_SENDER_TRANSPORT_IMAGE_NAME
+              value: notifier-worker-image

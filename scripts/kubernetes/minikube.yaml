@@ -1,0 +1,8 @@
+apiVersion: ctlptl.dev/v1alpha1
+kind: Cluster
+product: minikube
+registry: ctlptl-registry
+minCPUs: 5
+minikube:
+  startFlags:
+    - "--memory=40g"

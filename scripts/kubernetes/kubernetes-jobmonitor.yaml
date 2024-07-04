@@ -1,0 +1,105 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: jobmonitor
+  namespace: ort-server
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: ort-server
+  name: jobmonitor-watcher
+rules:
+  - apiGroups: ["core"]
+    resources: ["pods"]
+    verbs: ["list", "get", "delete"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["list", "watch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: jobmonitor-watcher-binding
+  namespace: ort-server
+subjects:
+  - kind: ServiceAccount
+    name: jobmonitor
+    namespace: ort-server
+roleRef:
+  kind: Role
+  name: jobmonitor-watcher
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubernetes-jobmonitor
+  namespace: ort-server
+  labels:
+    app: ort-server
+    component: kubernetes-jobmonitor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ort-server
+      component: kubernetes-jobmonitor
+  template:
+    metadata:
+      labels:
+        app: ort-server
+        component: kubernetes-jobmonitor
+    spec:
+      serviceAccountName: jobmonitor
+      volumes:
+        - name: ort-core-secret-volume
+          configMap:
+            name: ort-server-secret-configmap
+            items:
+              - key: secrets
+                path: secrets
+      containers:
+        - name: kubernetes-jobmonitor
+          image: "kubernetes-jobmonitor-image"
+          volumeMounts:
+            - name: ort-core-secret-volume
+              mountPath: /mnt/secrets
+              subPath: secrets
+              readOnly: true
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1"
+          env:
+            - name: DB_HOST
+              value: "postgresql"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: ort
+            - name: DB_SCHEMA
+              value: public
+            - name: DB_USERNAME
+              value: postgres
+            - name: DB_PASSWORD
+              value: postgres
+            - name: DB_SSL_MODE
+              value: disable
+            - name: ORCHESTRATOR_SENDER_TRANSPORT_TYPE
+              value: "rabbitMQ"
+            - name: ORCHESTRATOR_SENDER_TRANSPORT_SERVER_URI
+              value: "amqp://rabbitmq-headless.ort-server.svc.cluster.local:5672"
+            - name: ORCHESTRATOR_SENDER_TRANSPORT_QUEUE_NAME
+              value: orchestrator_queue
+            - name: MONITOR_SECRET_PROVIDER
+              value: secret-file
+            - name: MONITOR_SECRET_FILES
+              value: /mnt/secrets
+            - name: ALLOW_SECRETS_FROM_CONFIG
+              value: "true"
+            - name: MONITOR_NAMESPACE
+              value: ort-server
