@@ -151,6 +151,10 @@ k8s_resource(
   labels=['ort-server'],
 )
 
+configmap_create('ort-orchestrator-config',
+  namespace='ort-server',
+  from_file=['application.conf=./scripts/kubernetes/orchestrator.application.conf'])
+
 k8s_resource(
   workload='ort-server-orchestrator',
   resource_deps=['keycloak', 'rabbitmq', 'rabbitmq-terraform', 'graphite', 'postgresql', 'ort-server-core', 'worker-base-images'],
@@ -163,7 +167,7 @@ custom_build(
   live_update= [
     sync('./orchestrator/build/classes/kotlin/main', '/app/classes')
   ],
-  deps=['./orchestrator/build/classes', './orchestrator/build.gradle.kts'],
+  deps=['./orchestrator/build/classes', './orchestrator/build.gradle.kts', './scripts/kubernetes/orchestrator.application.conf'],
 )
 
 k8s_yaml('./scripts/kubernetes/core.yaml')
