@@ -38,6 +38,10 @@ configmap_create('ort-core-secrets',
   namespace='ort-server',
   from_file=['secrets.properties=./scripts/compose/secrets.properties'])
 
+secret_create_generic('ort-secrets',
+  namespace='ort-server',
+  from_file=['secrets.properties=./scripts/compose/secrets.properties'])
+
 secret_create_generic('ort-core-secrets',
   namespace='ort-server',
   from_file=['secrets.properties=./scripts/compose/secrets.properties']
@@ -123,13 +127,17 @@ helm_resource(
   labels=['monitoring'],
 )
 
+configmap_create('ort-core-config',
+  namespace='ort-server',
+  from_file=['application.conf=./scripts/kubernetes/core.application.conf'])
+
 custom_build(
   'core',
   './gradlew :core:jibDockerBuild --image $EXPECTED_REF',
   live_update= [
     sync('./core/build/classes/kotlin/main', '/app/classes')
   ],
-  deps=['./core/build/classes', './core/build.gradle.kts'],
+  deps=['./core/build/classes', './core/build.gradle.kts', './scripts/kubernetes/core.application.conf'],
 )
 
 k8s_resource(
