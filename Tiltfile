@@ -155,6 +155,12 @@ configmap_create('ort-orchestrator-config',
   namespace='ort-server',
   from_file=['application.conf=./scripts/kubernetes/orchestrator.application.conf'])
 
+secret_create_generic('ort-config-worker-config',
+  secret_type='generic',
+  namespace='ort-server',
+  from_file=['application.conf=./scripts/kubernetes/config.application.conf'],
+  )
+
 k8s_resource(
   workload='ort-server-orchestrator',
   resource_deps=['keycloak', 'rabbitmq', 'rabbitmq-terraform', 'graphite', 'postgresql', 'ort-server-core', 'worker-base-images'],
