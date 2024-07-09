@@ -80,6 +80,21 @@ spec:
               mountPath: /app/resources/secrets.properties
               subPath: secrets.properties
               readOnly: true
+          env:
+            - name: ANALYZER_SENDER_TRANSPORT_IMAGE_NAME
+              value: "analyzer-worker-image"
+            - name: ADVISOR_SENDER_TRANSPORT_IMAGE_NAME
+              value: "advisor-worker-image"
+            - name: CONFIG_SENDER_TRANSPORT_IMAGE_NAME
+              value: "config-worker-image"
+            - name: EVALUATOR_SENDER_TRANSPORT_IMAGE_NAME
+              value: "evaluator-worker-image"
+            - name: NOTIFIER_SENDER_TRANSPORT_IMAGE_NAME
+              value: "notifier-worker-image"
+            - name: REPORTER_SENDER_TRANSPORT_IMAGE_NAME
+              value: "reporter-worker-image"
+            - name: SCANNER_SENDER_TRANSPORT_IMAGE_NAME
+              value: "scanner-worker-image"
           resources:
             requests:
               memory: "256Mi"
