@@ -53,19 +53,23 @@ spec:
     spec:
       serviceAccountName: jobmonitor
       volumes:
-        - name: ort-core-secret-volume
-          configMap:
-            name: ort-server-secret-configmap
-            items:
-              - key: secrets
-                path: secrets
+        - name: ort-jobmonitor-config-volume
+          configMap: 
+            name: ort-jobmonitor-config
+        - name: ort-secrets
+          secret: 
+            secretName: ort-secrets
       containers:
         - name: kubernetes-jobmonitor
           image: "kubernetes-jobmonitor-image"
           volumeMounts:
-            - name: ort-core-secret-volume
-              mountPath: /mnt/secrets
-              subPath: secrets
+            - name: ort-jobmonitor-config-volume
+              mountPath: /app/resources/application.conf
+              subPath: application.conf
+              readOnly: true
+            - name: ort-secrets
+              mountPath: /app/resources/secrets.properties
+              subPath: secrets.properties
               readOnly: true
           resources:
             requests:
@@ -74,32 +78,3 @@ spec:
             limits:
               memory: "2Gi"
               cpu: "1"
-          env:
-            - name: DB_HOST
-              value: "postgresql"
-            - name: DB_PORT
-              value: "5432"
-            - name: DB_NAME
-              value: ort
-            - name: DB_SCHEMA
-              value: public
-            - name: DB_USERNAME
-              value: postgres
-            - name: DB_PASSWORD
-              value: postgres
-            - name: DB_SSL_MODE
-              value: disable
-            - name: ORCHESTRATOR_SENDER_TRANSPORT_TYPE
-              value: "rabbitMQ"
-            - name: ORCHESTRATOR_SENDER_TRANSPORT_SERVER_URI
-              value: "amqp://rabbitmq-headless.ort-server.svc.cluster.local:5672"
-            - name: ORCHESTRATOR_SENDER_TRANSPORT_QUEUE_NAME
-              value: orchestrator_queue
-            - name: MONITOR_SECRET_PROVIDER
-              value: secret-file
-            - name: MONITOR_SECRET_FILES
-              value: /mnt/secrets
-            - name: ALLOW_SECRETS_FROM_CONFIG
-              value: "true"
-            - name: MONITOR_NAMESPACE
-              value: ort-server

@@ -305,9 +305,16 @@ custom_build(
   live_update= [
     sync('./transport/kubernetes-jobmonitor/build/classes/kotlin/main', '/app/classes')
   ],
-  deps=['./transport/kubernetes-jobmonitor/build/classes', './transport/kubernetes-jobmonitor/build.gradle.kts'],
+  deps=[
+    './transport/kubernetes-jobmonitor/build/classes',
+    './transport/kubernetes-jobmonitor/build.gradle.kts',
+    './scripts/kubernetes/jobmonitor.application.conf'],
   match_in_env_vars=True,
 )
+
+configmap_create('ort-jobmonitor-config',
+  namespace='ort-server',
+  from_file=['application.conf=./scripts/kubernetes/jobmonitor.application.conf'])
 
 k8s_yaml('./scripts/kubernetes/kubernetes-jobmonitor.yaml')
 
