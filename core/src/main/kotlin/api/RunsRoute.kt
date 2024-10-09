@@ -115,7 +115,7 @@ fun Route.runs() = route("runs") {
     }
 
     route("{runId}") {
-        get(getOrtRunById) { _ ->
+        get(getOrtRunById) {
             val ortRunId = call.requireIdParameter("runId")
 
             ortRunRepository.get(ortRunId)?.let { ortRun ->
