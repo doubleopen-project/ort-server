@@ -19,6 +19,8 @@
 
 import z from 'zod';
 
+import { OrtRunStatus } from '@/api/requests';
+
 // Pagination schema that is used for search parameter validation
 export const paginationSchema = z.object({
   page: z.number().optional(),
@@ -27,3 +29,52 @@ export const paginationSchema = z.object({
 
 // Enum schema for the groupId parameter of the Groups endpoints
 export const groupsSchema = z.enum(['admins', 'writers', 'readers']);
+
+/* Enum schema for the status parameter of the runs. Declared separately
+ * to catch if the OrtRunStatus type changes in the future, as the zod
+ * schema cannot be generated from the type directly.
+ */
+export const ortRunStatusValues: OrtRunStatus[] = [
+  'CREATED',
+  'ACTIVE',
+  'FAILED',
+  'FINISHED',
+  'FINISHED_WITH_ISSUES',
+];
+
+// Status schema that is used for search parameter validation
+export const statusSchema = z.object({
+  status: z
+    .string()
+    .transform((value, ctx) => {
+      const statuses = value.split(',');
+
+      for (const status of statuses) {
+        if (
+          !ortRunStatusValues.includes(status.toUpperCase() as OrtRunStatus)
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Invalid status: ${status}`,
+          });
+          return z.NEVER;
+        }
+        return value;
+      }
+    })
+    .optional(),
+  /*
+    .transform((value) => value.split(','))
+    .pipe(
+      z.array(
+        z.enum([
+          'created',
+          'active',
+          'failed',
+          'finished',
+          'finished_with_issues',
+        ])
+      )
+    )
+    .optional(),*/
+});
