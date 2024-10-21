@@ -19,12 +19,18 @@
 
 import { z } from 'zod';
 
-import { CreateOrtRun, OrtRun } from '@/api/requests';
-import { packageManagers } from './-types';
+import { AnalyzerJobConfiguration, CreateOrtRun, OrtRun } from '@/api/requests';
+
+//import { packageManagers } from './-types';
 
 const keyValueSchema = z.object({
   key: z.string().min(1),
   value: z.string(), // Allow empty values for now
+});
+
+const packageManagerOptionsSchema = z.object({
+  enabled: z.boolean(),
+  options: z.array(keyValueSchema).optional(),
 });
 
 export const createRunFormSchema = z.object({
@@ -36,7 +42,23 @@ export const createRunFormSchema = z.object({
       repositoryConfigPath: z.string().optional(),
       allowDynamicVersions: z.boolean(),
       skipExcluded: z.boolean(),
-      enabledPackageManagers: z.array(z.string()),
+      packageManagers: z.object({
+        Bazel: packageManagerOptionsSchema,
+        Bundler: packageManagerOptionsSchema,
+        Cargo: packageManagerOptionsSchema,
+        Composer: packageManagerOptionsSchema,
+        GoMod: packageManagerOptionsSchema,
+        GradleInspector: packageManagerOptionsSchema,
+        Maven: packageManagerOptionsSchema,
+        NPM: packageManagerOptionsSchema,
+        NuGet: packageManagerOptionsSchema,
+        PIP: packageManagerOptionsSchema,
+        Pipenv: packageManagerOptionsSchema,
+        PNPM: packageManagerOptionsSchema,
+        Poetry: packageManagerOptionsSchema,
+        Yarn: packageManagerOptionsSchema,
+        Yarn2: packageManagerOptionsSchema,
+      }),
     }),
     advisor: z.object({
       enabled: z.boolean(),
@@ -91,6 +113,41 @@ export const createRunFormSchema = z.object({
 export type CreateRunFormValues = z.infer<typeof createRunFormSchema>;
 
 /**
+ * Converts an object map coming from the back-end to an array of key-value pairs.
+ * This is useful for form handling where an array of objects is required.
+ *
+ * @param objectMap - The object map from the back-end.
+ * @returns An array of key-value pairs.
+ */
+const convertMapToArray = (objectMap: {
+  [key: string]: string;
+}): { key: string; value: string }[] => {
+  return Object.entries(objectMap).map(([key, value]) => ({
+    key,
+    value,
+  }));
+};
+
+/**
+ * Converts an array of key-value pairs to an object map.
+ * This is useful for converting form data back to the format expected by the back-end.
+ *
+ * @param keyValueArray - An array of key-value pairs.
+ * @returns The object map.
+ */
+const convertArrayToMap = (
+  keyValueArray: { key: string; value: string }[]
+): { [key: string]: string } => {
+  return keyValueArray.reduce(
+    (acc, { key, value }) => {
+      acc[key] = value;
+      return acc;
+    },
+    {} as { [key: string]: string }
+  );
+};
+
+/**
  * Get the default values for the create run form. The form can be provided with a previously run
  * ORT run, in which case the values from it are used as defaults. Otherwise uses base defaults.
  */
@@ -107,10 +164,23 @@ export function defaultValues(
         repositoryConfigPath: '',
         allowDynamicVersions: true,
         skipExcluded: true,
-        enabledPackageManagers: [
-          ...packageManagers.map((pm) => pm.id),
-          'Unmanaged',
-        ],
+        packageManagers: {
+          Bazel: { enabled: true, options: [{ key: '', value: '' }] },
+          Bundler: { enabled: true, options: [{ key: '', value: '' }] },
+          Cargo: { enabled: true, options: [{ key: '', value: '' }] },
+          Composer: { enabled: true, options: [{ key: '', value: '' }] },
+          GoMod: { enabled: true, options: [{ key: '', value: '' }] },
+          GradleInspector: { enabled: true, options: [{ key: '', value: '' }] },
+          Maven: { enabled: true, options: [{ key: '', value: '' }] },
+          NPM: { enabled: true, options: [{ key: '', value: '' }] },
+          NuGet: { enabled: true, options: [{ key: '', value: '' }] },
+          PIP: { enabled: true, options: [{ key: '', value: '' }] },
+          Pipenv: { enabled: true, options: [{ key: '', value: '' }] },
+          PNPM: { enabled: true, options: [{ key: '', value: '' }] },
+          Poetry: { enabled: true, options: [{ key: '', value: '' }] },
+          Yarn: { enabled: true, options: [{ key: '', value: '' }] },
+          Yarn2: { enabled: true, options: [{ key: '', value: '' }] },
+        },
       },
       advisor: {
         enabled: true,
@@ -180,9 +250,158 @@ export function defaultValues(
             skipExcluded:
               ortRun.jobConfigs.analyzer?.skipExcluded ||
               baseDefaults.jobConfigs.analyzer.skipExcluded,
-            enabledPackageManagers:
-              ortRun.jobConfigs.analyzer?.enabledPackageManagers ||
-              baseDefaults.jobConfigs.analyzer.enabledPackageManagers,
+            packageManagers: {
+              Bazel: {
+                enabled:
+                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
+                    'Bazel'
+                  ) || true,
+                options: convertMapToArray(
+                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.Bazel
+                    ?.options || {}
+                ),
+              },
+              Bundler: {
+                enabled:
+                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
+                    'Bundler'
+                  ) || true,
+                options: convertMapToArray(
+                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.Bundler
+                    ?.options || {}
+                ),
+              },
+              Cargo: {
+                enabled:
+                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
+                    'Cargo'
+                  ) || true,
+                options: convertMapToArray(
+                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.Cargo
+                    ?.options || {}
+                ),
+              },
+              Composer: {
+                enabled:
+                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
+                    'Composer'
+                  ) || true,
+                options: convertMapToArray(
+                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.Composer
+                    ?.options || {}
+                ),
+              },
+              GoMod: {
+                enabled:
+                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
+                    'GoMod'
+                  ) || true,
+                options: convertMapToArray(
+                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.GoMod
+                    ?.options || {}
+                ),
+              },
+              GradleInspector: {
+                enabled:
+                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
+                    'GradleInspector'
+                  ) || true,
+                options: convertMapToArray(
+                  ortRun.jobConfigs.analyzer?.packageManagerOptions
+                    ?.GradleInspector?.options || {}
+                ),
+              },
+              Maven: {
+                enabled:
+                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
+                    'Maven'
+                  ) || true,
+                options: convertMapToArray(
+                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.Maven
+                    ?.options || {}
+                ),
+              },
+              NPM: {
+                enabled:
+                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
+                    'NPM'
+                  ) || true,
+                options: convertMapToArray(
+                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.NPM
+                    ?.options || {}
+                ),
+              },
+              NuGet: {
+                enabled:
+                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
+                    'NuGet'
+                  ) || true,
+                options: convertMapToArray(
+                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.NuGet
+                    ?.options || {}
+                ),
+              },
+              PIP: {
+                enabled:
+                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
+                    'PIP'
+                  ) || true,
+                options: convertMapToArray(
+                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.PIP
+                    ?.options || {}
+                ),
+              },
+              Pipenv: {
+                enabled:
+                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
+                    'Pipenv'
+                  ) || true,
+                options: convertMapToArray(
+                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.Pipenv
+                    ?.options || {}
+                ),
+              },
+              PNPM: {
+                enabled:
+                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
+                    'PNPM'
+                  ) || true,
+                options: convertMapToArray(
+                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.PNPM
+                    ?.options || {}
+                ),
+              },
+              Poetry: {
+                enabled:
+                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
+                    'Poetry'
+                  ) || true,
+                options: convertMapToArray(
+                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.Poetry
+                    ?.options || {}
+                ),
+              },
+              Yarn: {
+                enabled:
+                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
+                    'Yarn'
+                  ) || true,
+                options: convertMapToArray(
+                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.Yarn
+                    ?.options || {}
+                ),
+              },
+              Yarn2: {
+                enabled:
+                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
+                    'Yarn2'
+                  ) || true,
+                options: convertMapToArray(
+                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.Yarn2
+                    ?.options || {}
+                ),
+              },
+            },
           },
           advisor: {
             enabled:
@@ -303,20 +522,10 @@ export function defaultValues(
           },
           // Convert the parameters object map coming from the back-end to an array of key-value pairs.
           // This needs to be done because the useFieldArray hook requires an array of objects.
-          parameters: ortRun.jobConfigs.parameters
-            ? Object.entries(ortRun.jobConfigs.parameters).map(([k, v]) => ({
-                key: k,
-                value: v,
-              }))
-            : [],
+          parameters: convertMapToArray(ortRun.jobConfigs.parameters || {}),
         },
         // Convert the labels object map coming from the back-end to an array of key-value pairs.
-        labels: ortRun.labels
-          ? Object.entries(ortRun.labels).map(([k, v]) => ({
-              key: k,
-              value: v,
-            }))
-          : [],
+        labels: convertMapToArray(ortRun.labels || {}),
         jobConfigContext:
           ortRun.jobConfigContext || baseDefaults.jobConfigContext,
       }
@@ -337,12 +546,35 @@ export function formValuesToPayload(
   // in the request body. If a job is disabled in the UI, we pass "undefined"
   // as the configuration for that job in the request body, in effect leaving
   // it empty, and thus disabling the job.
-  const analyzerConfig = {
+  const analyzerConfig: AnalyzerJobConfiguration = {
     allowDynamicVersions: values.jobConfigs.analyzer.allowDynamicVersions,
     repositoryConfigPath:
       values.jobConfigs.analyzer.repositoryConfigPath || undefined,
     skipExcluded: values.jobConfigs.analyzer.skipExcluded,
-    enabledPackageManagers: values.jobConfigs.analyzer.enabledPackageManagers,
+    // Convert the relevant part of form schema back to the format expected by the back-end.
+    enabledPackageManagers: [
+      ...Object.keys(values.jobConfigs.analyzer.packageManagers).filter(
+        (pm) =>
+          values.jobConfigs.analyzer.packageManagers[
+            pm as keyof typeof values.jobConfigs.analyzer.packageManagers
+          ].enabled
+      ),
+      'Unmanaged', // Add "Unmanaged" package manager to all runs
+    ],
+    packageManagerOptions: (() => {
+      const options = Object.entries(values.jobConfigs.analyzer.packageManagers)
+        .filter(
+          ([_pmId, pm]) => pm.enabled && pm.options && pm.options.length > 0
+        )
+        .map(([pmId, pm]) => ({
+          [pmId]: {
+            options: convertArrayToMap(pm.options || []),
+          },
+        }))
+        .reduce((acc, pm) => ({ ...acc, ...pm }), {});
+
+      return Object.keys(options).length > 0 ? options : undefined;
+    })(),
   };
 
   const advisorConfig = values.jobConfigs.advisor.enabled
@@ -427,23 +659,9 @@ export function formValuesToPayload(
 
   // Convert the parameters and labels arrays back to objects, as expected by the back-end.
   const parameters = values.jobConfigs.parameters
-    ? values.jobConfigs.parameters.reduce(
-        (acc, param) => {
-          acc[param.key] = param.value;
-          return acc;
-        },
-        {} as { [key: string]: string }
-      )
+    ? convertArrayToMap(values.jobConfigs.parameters)
     : undefined;
-  const labels = values.labels
-    ? values.labels.reduce(
-        (acc, label) => {
-          acc[label.key] = label.value;
-          return acc;
-        },
-        {} as { [key: string]: string }
-      )
-    : undefined;
+  const labels = values.labels ? convertArrayToMap(values.labels) : undefined;
 
   const requestBody = {
     revision: values.revision,
