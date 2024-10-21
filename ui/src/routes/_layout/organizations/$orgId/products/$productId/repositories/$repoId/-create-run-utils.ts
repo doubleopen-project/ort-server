@@ -154,6 +154,26 @@ const convertArrayToMap = (
 export function defaultValues(
   ortRun: OrtRun | null
 ): z.infer<typeof createRunFormSchema> {
+  function defaultPackageManagerOptions(packageManagerId?: string) {
+    if (packageManagerId) {
+      return {
+        enabled:
+          ortRun?.jobConfigs.analyzer?.enabledPackageManagers?.includes(
+            packageManagerId
+          ) || true,
+        options: convertMapToArray(
+          ortRun?.jobConfigs.analyzer?.packageManagerOptions?.[packageManagerId]
+            ?.options || {}
+        ),
+      };
+    } else {
+      return {
+        enabled: true,
+        options: [{ key: '', value: '' }],
+      };
+    }
+  }
+
   // Default values for the form: edit only these, not the defaultValues object.
   const baseDefaults = {
     revision: 'main',
@@ -165,21 +185,21 @@ export function defaultValues(
         allowDynamicVersions: true,
         skipExcluded: true,
         packageManagers: {
-          Bazel: { enabled: true, options: [{ key: '', value: '' }] },
-          Bundler: { enabled: true, options: [{ key: '', value: '' }] },
-          Cargo: { enabled: true, options: [{ key: '', value: '' }] },
-          Composer: { enabled: true, options: [{ key: '', value: '' }] },
-          GoMod: { enabled: true, options: [{ key: '', value: '' }] },
-          GradleInspector: { enabled: true, options: [{ key: '', value: '' }] },
-          Maven: { enabled: true, options: [{ key: '', value: '' }] },
-          NPM: { enabled: true, options: [{ key: '', value: '' }] },
-          NuGet: { enabled: true, options: [{ key: '', value: '' }] },
-          PIP: { enabled: true, options: [{ key: '', value: '' }] },
-          Pipenv: { enabled: true, options: [{ key: '', value: '' }] },
-          PNPM: { enabled: true, options: [{ key: '', value: '' }] },
-          Poetry: { enabled: true, options: [{ key: '', value: '' }] },
-          Yarn: { enabled: true, options: [{ key: '', value: '' }] },
-          Yarn2: { enabled: true, options: [{ key: '', value: '' }] },
+          Bazel: defaultPackageManagerOptions(),
+          Bundler: defaultPackageManagerOptions(),
+          Cargo: defaultPackageManagerOptions(),
+          Composer: defaultPackageManagerOptions(),
+          GoMod: defaultPackageManagerOptions(),
+          GradleInspector: defaultPackageManagerOptions(),
+          Maven: defaultPackageManagerOptions(),
+          NPM: defaultPackageManagerOptions(),
+          NuGet: defaultPackageManagerOptions(),
+          PIP: defaultPackageManagerOptions(),
+          Pipenv: defaultPackageManagerOptions(),
+          PNPM: defaultPackageManagerOptions(),
+          Poetry: defaultPackageManagerOptions(),
+          Yarn: defaultPackageManagerOptions(),
+          Yarn2: defaultPackageManagerOptions(),
         },
       },
       advisor: {
@@ -251,156 +271,21 @@ export function defaultValues(
               ortRun.jobConfigs.analyzer?.skipExcluded ||
               baseDefaults.jobConfigs.analyzer.skipExcluded,
             packageManagers: {
-              Bazel: {
-                enabled:
-                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
-                    'Bazel'
-                  ) || true,
-                options: convertMapToArray(
-                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.Bazel
-                    ?.options || {}
-                ),
-              },
-              Bundler: {
-                enabled:
-                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
-                    'Bundler'
-                  ) || true,
-                options: convertMapToArray(
-                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.Bundler
-                    ?.options || {}
-                ),
-              },
-              Cargo: {
-                enabled:
-                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
-                    'Cargo'
-                  ) || true,
-                options: convertMapToArray(
-                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.Cargo
-                    ?.options || {}
-                ),
-              },
-              Composer: {
-                enabled:
-                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
-                    'Composer'
-                  ) || true,
-                options: convertMapToArray(
-                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.Composer
-                    ?.options || {}
-                ),
-              },
-              GoMod: {
-                enabled:
-                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
-                    'GoMod'
-                  ) || true,
-                options: convertMapToArray(
-                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.GoMod
-                    ?.options || {}
-                ),
-              },
-              GradleInspector: {
-                enabled:
-                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
-                    'GradleInspector'
-                  ) || true,
-                options: convertMapToArray(
-                  ortRun.jobConfigs.analyzer?.packageManagerOptions
-                    ?.GradleInspector?.options || {}
-                ),
-              },
-              Maven: {
-                enabled:
-                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
-                    'Maven'
-                  ) || true,
-                options: convertMapToArray(
-                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.Maven
-                    ?.options || {}
-                ),
-              },
-              NPM: {
-                enabled:
-                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
-                    'NPM'
-                  ) || true,
-                options: convertMapToArray(
-                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.NPM
-                    ?.options || {}
-                ),
-              },
-              NuGet: {
-                enabled:
-                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
-                    'NuGet'
-                  ) || true,
-                options: convertMapToArray(
-                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.NuGet
-                    ?.options || {}
-                ),
-              },
-              PIP: {
-                enabled:
-                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
-                    'PIP'
-                  ) || true,
-                options: convertMapToArray(
-                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.PIP
-                    ?.options || {}
-                ),
-              },
-              Pipenv: {
-                enabled:
-                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
-                    'Pipenv'
-                  ) || true,
-                options: convertMapToArray(
-                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.Pipenv
-                    ?.options || {}
-                ),
-              },
-              PNPM: {
-                enabled:
-                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
-                    'PNPM'
-                  ) || true,
-                options: convertMapToArray(
-                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.PNPM
-                    ?.options || {}
-                ),
-              },
-              Poetry: {
-                enabled:
-                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
-                    'Poetry'
-                  ) || true,
-                options: convertMapToArray(
-                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.Poetry
-                    ?.options || {}
-                ),
-              },
-              Yarn: {
-                enabled:
-                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
-                    'Yarn'
-                  ) || true,
-                options: convertMapToArray(
-                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.Yarn
-                    ?.options || {}
-                ),
-              },
-              Yarn2: {
-                enabled:
-                  ortRun.jobConfigs.analyzer?.enabledPackageManagers?.includes(
-                    'Yarn2'
-                  ) || true,
-                options: convertMapToArray(
-                  ortRun.jobConfigs.analyzer?.packageManagerOptions?.Yarn2
-                    ?.options || {}
-                ),
-              },
+              Bazel: defaultPackageManagerOptions('Bazel'),
+              Bundler: defaultPackageManagerOptions('Bundler'),
+              Cargo: defaultPackageManagerOptions('Cargo'),
+              Composer: defaultPackageManagerOptions('Composer'),
+              GoMod: defaultPackageManagerOptions('GoMod'),
+              GradleInspector: defaultPackageManagerOptions('GradleInspector'),
+              Maven: defaultPackageManagerOptions('Maven'),
+              NPM: defaultPackageManagerOptions('NPM'),
+              NuGet: defaultPackageManagerOptions('NuGet'),
+              PIP: defaultPackageManagerOptions('PIP'),
+              Pipenv: defaultPackageManagerOptions('Pipenv'),
+              PNPM: defaultPackageManagerOptions('PNPM'),
+              Poetry: defaultPackageManagerOptions('Poetry'),
+              Yarn: defaultPackageManagerOptions('Yarn'),
+              Yarn2: defaultPackageManagerOptions('Yarn2'),
             },
           },
           advisor: {
