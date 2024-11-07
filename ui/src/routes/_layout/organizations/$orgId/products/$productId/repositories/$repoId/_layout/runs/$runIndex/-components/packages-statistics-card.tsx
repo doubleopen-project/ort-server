@@ -37,6 +37,10 @@ export const PackagesStatisticsCard = ({
   status,
   runId,
 }: PackagesStatisticsCardProps) => {
+  const analyzerFinished =
+    status !== undefined &&
+    ['FINISHED', 'FINISHED_WITH_ISSUES', 'FAILED'].includes(status);
+
   const { data, isPending, isError, error } =
     usePackagesServiceGetPackagesByRunId({
       runId: runId,
@@ -95,15 +99,15 @@ export const PackagesStatisticsCard = ({
       icon={() => (
         <ListTree className={`h-4 w-4 ${getStatusFontColor(status)}`} />
       )}
-      value={status ? packagesTotal : 'Skipped'}
+      value={analyzerFinished ? packagesTotal : 'Not ready'}
       description={
         ecoSystems.length
           ? ecoSystems.length > 1
             ? `from ${ecoSystems.length} ecosystems (${ecoSystems.join(', ')})`
             : `from 1 ecosystem (${ecoSystems})`
-          : status
+          : analyzerFinished
             ? ''
-            : 'Enable the job for results'
+            : 'Wait for analyzer to finish'
       }
       className='h-full hover:bg-muted/50'
     />

@@ -30,12 +30,18 @@ import { toast } from '@/lib/toast';
 type IssuesStatisticsCardProps = {
   status: JobStatus | undefined;
   runId: number;
+  runFinished: boolean;
 };
 
 export const IssuesStatisticsCard = ({
   status,
   runId,
+  runFinished,
 }: IssuesStatisticsCardProps) => {
+  const analyzerFinished =
+    status !== undefined &&
+    ['FINISHED', 'FINISHED_WITH_ISSUES', 'FAILED'].includes(status);
+
   const { data, isPending, isError, error } = useIssuesServiceGetIssuesByRunId({
     runId: runId,
     limit: 1,
@@ -70,8 +76,10 @@ export const IssuesStatisticsCard = ({
     <StatisticsCard
       title='Issues'
       icon={() => <Bug className={`h-4 w-4 ${getStatusFontColor(status)}`} />}
-      value={status ? issuesTotal : 'Skipped'}
-      description={status ? '' : 'Enable the job for results'}
+      value={analyzerFinished ? issuesTotal : 'Not ready'}
+      description={
+        runFinished ? '' : 'Incomplete, may rise as more jobs finish'
+      }
       className='h-full hover:bg-muted/50'
     />
   );

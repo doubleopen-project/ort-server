@@ -20,7 +20,7 @@
 import { Scale } from 'lucide-react';
 
 import { useRuleViolationsServiceGetRuleViolationsByRunId } from '@/api/queries';
-import { JobStatus } from '@/api/requests';
+import { JobStatus, OrtRunStatus } from '@/api/requests';
 import { LoadingIndicator } from '@/components/loading-indicator';
 import { StatisticsCard } from '@/components/statistics-card';
 import { ToastError } from '@/components/toast-error';
@@ -30,11 +30,15 @@ import { toast } from '@/lib/toast';
 type RuleViolationsStatisticsCardProps = {
   status: JobStatus | undefined;
   runId: number;
+  runStatus: OrtRunStatus;
+  skipped: boolean;
 };
 
 export const RuleViolationsStatisticsCard = ({
   status,
   runId,
+  runStatus,
+  skipped,
 }: RuleViolationsStatisticsCardProps) => {
   const { data, isPending, isError, error } =
     useRuleViolationsServiceGetRuleViolationsByRunId({
@@ -73,8 +77,14 @@ export const RuleViolationsStatisticsCard = ({
     <StatisticsCard
       title='Rule Violations'
       icon={() => <Scale className={`h-4 w-4 ${getStatusFontColor(status)}`} />}
-      value={status ? ruleViolationsTotal : 'Skipped'}
-      description={status ? '' : 'Enable the job for results'}
+      value={skipped ? 'Skipped' : status ? ruleViolationsTotal : 'Not ready'}
+      description={
+        skipped
+          ? 'Enable the job for results'
+          : status
+            ? ''
+            : 'Wait for evaluator to finish'
+      }
       className='h-full hover:bg-muted/50'
     />
   );

@@ -66,6 +66,9 @@ const RunComponent = () => {
     }
   );
 
+  console.log(ortRun.jobConfigs);
+  console.log(ortRun.resolvedJobConfigs);
+
   return (
     <>
       <div className='flex flex-col gap-2'>
@@ -239,6 +242,10 @@ const RunComponent = () => {
             <VulnerabilitiesStatisticsCard
               runId={ortRun.id}
               status={ortRun.jobs.advisor?.status}
+              skipped={
+                ortRun.jobConfigs.advisor === null ||
+                ortRun.jobConfigs.advisor === undefined
+              }
             />
           </Link>
           <Link
@@ -253,6 +260,10 @@ const RunComponent = () => {
             <RuleViolationsStatisticsCard
               runId={ortRun.id}
               status={ortRun.jobs.evaluator?.status}
+              skipped={
+                ortRun.jobConfigs.evaluator === null ||
+                ortRun.jobConfigs.evaluator === undefined
+              }
             />
           </Link>
         </div>

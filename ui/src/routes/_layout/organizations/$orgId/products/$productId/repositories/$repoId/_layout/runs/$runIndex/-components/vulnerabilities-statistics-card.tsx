@@ -30,11 +30,13 @@ import { toast } from '@/lib/toast';
 type VulnerabilitiesStatisticsCardProps = {
   status: JobStatus | undefined;
   runId: number;
+  skipped: boolean;
 };
 
 export const VulnerabilitiesStatisticsCard = ({
   status,
   runId,
+  skipped,
 }: VulnerabilitiesStatisticsCardProps) => {
   const { data, isPending, isError, error } =
     useVulnerabilitiesServiceGetVulnerabilitiesByRunId({
@@ -75,8 +77,14 @@ export const VulnerabilitiesStatisticsCard = ({
       icon={() => (
         <ShieldQuestion className={`h-4 w-4 ${getStatusFontColor(status)}`} />
       )}
-      value={status ? vulnerabilitiesTotal : 'Skipped'}
-      description={status ? '' : 'Enable the job for results'}
+      value={skipped ? 'Skipped' : status ? vulnerabilitiesTotal : 'Not ready'}
+      description={
+        skipped
+          ? 'Enable the job for results'
+          : status
+            ? ''
+            : 'Wait for advisor to finish'
+      }
       className='h-full hover:bg-muted/50'
     />
   );
