@@ -36,11 +36,13 @@ import org.eclipse.apoapsis.ortserver.api.v1.mapping.mapToApi
 import org.eclipse.apoapsis.ortserver.api.v1.mapping.mapToModel
 import org.eclipse.apoapsis.ortserver.api.v1.model.CreateRepository
 import org.eclipse.apoapsis.ortserver.api.v1.model.CreateSecret
+import org.eclipse.apoapsis.ortserver.api.v1.model.RepositoryWithRun
 import org.eclipse.apoapsis.ortserver.api.v1.model.SortDirection
 import org.eclipse.apoapsis.ortserver.api.v1.model.SortProperty
 import org.eclipse.apoapsis.ortserver.api.v1.model.UpdateProduct
 import org.eclipse.apoapsis.ortserver.api.v1.model.UpdateSecret
 import org.eclipse.apoapsis.ortserver.api.v1.model.Username
+import org.eclipse.apoapsis.ortserver.api.v1.model.VulnerabilityWithAccumulatedData
 import org.eclipse.apoapsis.ortserver.core.apiDocs.deleteProductById
 import org.eclipse.apoapsis.ortserver.core.apiDocs.deleteSecretByProductIdAndName
 import org.eclipse.apoapsis.ortserver.core.apiDocs.deleteUserFromProductGroup
@@ -48,6 +50,7 @@ import org.eclipse.apoapsis.ortserver.core.apiDocs.getProductById
 import org.eclipse.apoapsis.ortserver.core.apiDocs.getRepositoriesByProductId
 import org.eclipse.apoapsis.ortserver.core.apiDocs.getSecretByProductIdAndName
 import org.eclipse.apoapsis.ortserver.core.apiDocs.getSecretsByProductId
+import org.eclipse.apoapsis.ortserver.core.apiDocs.getVulnerabilitiesAcrossRepositoriesByProductId
 import org.eclipse.apoapsis.ortserver.core.apiDocs.patchProductById
 import org.eclipse.apoapsis.ortserver.core.apiDocs.patchSecretByProductIdAndName
 import org.eclipse.apoapsis.ortserver.core.apiDocs.postRepository
@@ -60,14 +63,20 @@ import org.eclipse.apoapsis.ortserver.core.utils.requireParameter
 import org.eclipse.apoapsis.ortserver.model.Repository
 import org.eclipse.apoapsis.ortserver.model.Secret
 import org.eclipse.apoapsis.ortserver.model.authorization.ProductPermission
+import org.eclipse.apoapsis.ortserver.model.util.ListQueryParameters
 import org.eclipse.apoapsis.ortserver.services.ProductService
+import org.eclipse.apoapsis.ortserver.services.RepositoryService
 import org.eclipse.apoapsis.ortserver.services.SecretService
+import org.eclipse.apoapsis.ortserver.services.VulnerabilityService
 
 import org.koin.ktor.ext.inject
 
+@Suppress("LongMethod")
 fun Route.products() = route("products/{productId}") {
     val productService by inject<ProductService>()
+    val repositoryService by inject<RepositoryService>()
     val secretService by inject<SecretService>()
+    val vulnerabilityService by inject<VulnerabilityService>()
 
     get(getProductById) {
         requirePermission(ProductPermission.READ)
@@ -235,6 +244,47 @@ fun Route.products() = route("products/{productId}") {
                 productService.removeUserFromGroup(user.username, productId, groupId)
                 call.respond(HttpStatusCode.NoContent)
             }
+        }
+    }
+
+    route("vulnerabilities") {
+        get(getVulnerabilitiesAcrossRepositoriesByProductId) {
+            requirePermission(ProductPermission.READ)
+
+            val productId = call.requireIdParameter("productId")
+            val pagingOptions = call.pagingOptions(SortProperty("rating", SortDirection.DESCENDING))
+
+            val repositories = productService.listRepositoriesForProduct(productId, ListQueryParameters())
+
+            val runRepositoryMap = mutableMapOf<Long, Repository>()
+
+            repositories.data.forEach { repository ->
+                val runId = repositoryService.getLatestOrtRunIdWithSuccessfulAdvisorJob(repository.id)
+                if (runId != null) runRepositoryMap[runId] = repository
+            }
+
+            val vulnerabilities =
+                vulnerabilityService.listForOrtRuns(runRepositoryMap.keys.toList(), pagingOptions.mapToModel())
+
+            val pagedResponse = vulnerabilities.mapToApi { vulnerability ->
+                VulnerabilityWithAccumulatedData(
+                    vulnerability = vulnerability.vulnerability.mapToApi(),
+                    identifier = vulnerability.identifier.mapToApi(),
+                    rating = vulnerability.rating.mapToApi(),
+                    repositoriesWithRuns = vulnerability.ortRunIds.mapNotNull { runId ->
+                        val repository = runRepositoryMap[runId]
+                        repository?.let {
+                            RepositoryWithRun(
+                                repository = repository.mapToApi(),
+                                globalRunId = runId
+                            )
+                        }
+                    },
+                    repositoriesCount = vulnerability.repositoriesCount
+                )
+            }
+
+            call.respond(HttpStatusCode.OK, pagedResponse)
         }
     }
 }

@@ -36,6 +36,7 @@ import org.eclipse.apoapsis.ortserver.api.v1.model.SortProperty
 import org.eclipse.apoapsis.ortserver.api.v1.model.UpdateProduct
 import org.eclipse.apoapsis.ortserver.api.v1.model.UpdateSecret
 import org.eclipse.apoapsis.ortserver.api.v1.model.Username
+import org.eclipse.apoapsis.ortserver.api.v1.model.VulnerabilityWithAccumulatedData
 import org.eclipse.apoapsis.ortserver.api.v1.model.asPresent
 
 val getProductById: OpenApiRoute.() -> Unit = {
@@ -407,6 +408,36 @@ val deleteUserFromProductGroup: OpenApiRoute.() -> Unit = {
 
         HttpStatusCode.NotFound to {
             description = "Product or group not found."
+        }
+    }
+}
+
+val getVulnerabilitiesAcrossRepositoriesByProductId: OpenApiRoute.() -> Unit = {
+    operationId = "GetVulnerabilitiesAcrossRepositoriesByProductId"
+    summary = "Get the vulnerabilities from latest successful advisor runs across the repositories in a product."
+    tags = listOf("Vulnerabilities")
+
+    request {
+        pathParameter<Long>("productId") {
+            description = "The product's ID."
+        }
+
+        standardListQueryParameters(
+            listOf(
+                "rating",
+                "repositories_count",
+                "external_id",
+                "identifier_type",
+                "identifier_namespace",
+                "identifier_name",
+                "identifier_version"
+            )
+        )
+    }
+
+    response {
+        HttpStatusCode.OK to {
+            jsonBody<PagedResponse<VulnerabilityWithAccumulatedData>> {}
         }
     }
 }

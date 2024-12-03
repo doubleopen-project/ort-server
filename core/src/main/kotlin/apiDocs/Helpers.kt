@@ -40,7 +40,7 @@ inline fun <reified T> OpenApiResponse.jsonBody(noinline block: OpenApiSimpleBod
 /**
  * Generate documentation for standard list query parameters.
  */
-fun OpenApiRequest.standardListQueryParameters() {
+fun OpenApiRequest.standardListQueryParameters(sortableFields: List<String>? = null) {
     queryParameter<Int>("limit") {
         description = "The maximum number of items to retrieve. If not specified at most 20 items are retrieved."
     }
@@ -51,6 +51,7 @@ fun OpenApiRequest.standardListQueryParameters() {
     queryParameter<String>("sort") {
         description = "Comma-separated list of fields by which the result is sorted. The listed fields must be " +
                 "supported by the endpoint. Putting a minus ('-') before a field name, reverts the sort order " +
-                "for this field. If not specified, a default sort field and sort order is used."
+                "for this field. If not specified, a default sort field and sort order is used." +
+                sortableFields?.let { " Supported fields are: ${it.joinToString()}." }
     }
 }

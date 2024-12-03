@@ -80,6 +80,7 @@ import org.eclipse.apoapsis.ortserver.api.v1.model.SourceCodeOrigin as ApiSource
 import org.eclipse.apoapsis.ortserver.api.v1.model.User as ApiUser
 import org.eclipse.apoapsis.ortserver.api.v1.model.VcsInfo as ApiVcsInfo
 import org.eclipse.apoapsis.ortserver.api.v1.model.Vulnerability as ApiVulnerability
+import org.eclipse.apoapsis.ortserver.api.v1.model.VulnerabilityRating as ApiVulnerabilityRating
 import org.eclipse.apoapsis.ortserver.api.v1.model.VulnerabilityReference as ApiVulnerabilityReference
 import org.eclipse.apoapsis.ortserver.api.v1.model.VulnerabilityWithIdentifier as ApiVulnerabilityWithIdentifier
 import org.eclipse.apoapsis.ortserver.model.AdvisorJob
@@ -121,6 +122,7 @@ import org.eclipse.apoapsis.ortserver.model.Secret
 import org.eclipse.apoapsis.ortserver.model.Severity
 import org.eclipse.apoapsis.ortserver.model.SourceCodeOrigin
 import org.eclipse.apoapsis.ortserver.model.User
+import org.eclipse.apoapsis.ortserver.model.VulnerabilityRating
 import org.eclipse.apoapsis.ortserver.model.VulnerabilityWithIdentifier
 import org.eclipse.apoapsis.ortserver.model.runs.Identifier
 import org.eclipse.apoapsis.ortserver.model.runs.Issue
@@ -761,3 +763,5 @@ fun ApiSourceCodeOrigin.mapToModel() =
 fun User.mapToApi() = ApiUser(username, firstName, lastName, email)
 
 fun EcosystemStats.mapToApi() = ApiEcosystemStats(name = name, count = count)
+
+fun VulnerabilityRating.mapToApi() = ApiVulnerabilityRating.valueOf(name)
