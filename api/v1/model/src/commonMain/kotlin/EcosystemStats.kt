@@ -26,12 +26,9 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class EcosystemStats(
-    /**
-     * The name of the ecosystem.
-     */
+    /** The name of the ecosystem. */
     val name: String,
-    /**
-     * The number of packages in the ORT run that belong to this ecosystem.
-     */
+
+    /** The number of packages in the ORT run(s) that belong to this ecosystem. */
     val count: Long
 )
