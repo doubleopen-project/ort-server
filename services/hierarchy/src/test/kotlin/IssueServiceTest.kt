@@ -70,21 +70,109 @@ class IssueServiceTest : WordSpec() {
             }
         }
 
-        "countForOrtRunId" should {
+        "countForOrtRunIds" should {
             "return issue count for ORT run" {
                 val service = IssueService(db)
-                val ortRun = createOrtRunWithIssues()
+                val repositoryId = fixtures.createRepository().id
 
-                service.countForOrtRunId(ortRun.id) shouldBe 3
+                val ortRun = createOrtRunWithIssues(
+                    repositoryId,
+                    analyzerIssues = listOf(
+                        Issue(
+                            timestamp = Clock.System.now(),
+                            source = "Analyzer",
+                            message = "Issue 1",
+                            severity = Severity.ERROR,
+                            affectedPath = "path"
+                        ),
+                    ),
+                    advisorIssues = listOf(
+                        Issue(
+                            timestamp = Clock.System.now(),
+                            source = "Advisor",
+                            message = "Issue 1",
+                            severity = Severity.ERROR,
+                            affectedPath = "path"
+                        ),
+                        Issue(
+                            timestamp = Clock.System.now(),
+                            source = "Advisor",
+                            message = "Issue 2",
+                            severity = Severity.WARNING,
+                            affectedPath = "path"
+                        )
+                    )
+                )
+
+                service.countForOrtRunIds(listOf(ortRun.id)) shouldBe 3
+            }
+
+            "return count of unique issues found in ORT runs" {
+                val service = IssueService(db)
+                val repositoryId = fixtures.createRepository().id
+
+                val commonIssue1 = Issue(
+                    timestamp = Clock.System.now(),
+                    source = "Analyzer",
+                    message = "Issue 1",
+                    severity = Severity.ERROR,
+                    affectedPath = "path"
+                )
+
+                val commonIssue2 = Issue(
+                    timestamp = Clock.System.now(),
+                    source = "Advisor",
+                    message = "Issue 1",
+                    severity = Severity.ERROR,
+                    affectedPath = "path"
+                )
+
+                val ortRun1Id = createOrtRunWithIssues(
+                    repositoryId,
+                    analyzerIssues = listOf(
+                        commonIssue1
+                    ),
+                    advisorIssues = listOf(
+                        commonIssue2,
+                        Issue(
+                            timestamp = Clock.System.now(),
+                            source = "Advisor",
+                            message = "Issue 2",
+                            severity = Severity.WARNING,
+                            affectedPath = "path"
+                        )
+                    )
+                ).id
+
+                val ortRun2Id = createOrtRunWithIssues(
+                    repositoryId,
+                    analyzerIssues = listOf(
+                        commonIssue1,
+                        Issue(
+                            timestamp = Clock.System.now(),
+                            source = "Analyzer",
+                            message = "Issue 2",
+                            severity = Severity.HINT,
+                            affectedPath = "path"
+                        )
+                    ),
+                    advisorIssues = listOf(
+                        commonIssue2,
+                    )
+                ).id
+
+                service.countForOrtRunIds(listOf(ortRun1Id, ortRun2Id)) shouldBe 4
             }
         }
     }
 
-    private fun createOrtRunWithIssues(): OrtRun {
-        val repository = fixtures.createRepository()
-
+    private fun createOrtRunWithIssues(
+        repositoryId: Long,
+        analyzerIssues: List<Issue>,
+        advisorIssues: List<Issue>
+    ): OrtRun {
         val ortRun = fixtures.createOrtRun(
-            repositoryId = repository.id,
+            repositoryId = repositoryId,
             revision = "revision",
             jobConfigurations = JobConfigurations()
         )
@@ -155,15 +243,7 @@ class IssueServiceTest : WordSpec() {
                     isModified = false
                 ),
             ),
-            issues = listOf(
-                Issue(
-                    timestamp = Clock.System.now(),
-                    source = "Analyzer",
-                    message = "Issue 1",
-                    severity = Severity.ERROR,
-                    affectedPath = "path"
-                ),
-            ),
+            issues = analyzerIssues,
             dependencyGraphs = emptyMap()
         )
 
@@ -200,22 +280,7 @@ class IssueServiceTest : WordSpec() {
                         capabilities = listOf("vulnerabilities"),
                         startTime = Clock.System.now(),
                         endTime = Clock.System.now(),
-                        issues = listOf(
-                            Issue(
-                                timestamp = Clock.System.now(),
-                                source = "Advisor",
-                                message = "Issue 1",
-                                severity = Severity.ERROR,
-                                affectedPath = "path"
-                            ),
-                            Issue(
-                                timestamp = Clock.System.now(),
-                                source = "Advisor",
-                                message = "Issue 2",
-                                severity = Severity.WARNING,
-                                affectedPath = "path"
-                            )
-                        ),
+                        issues = advisorIssues,
                         defects = emptyList(),
                         vulnerabilities = emptyList(),
                     )

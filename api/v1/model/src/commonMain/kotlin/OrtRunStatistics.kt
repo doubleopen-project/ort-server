@@ -29,6 +29,9 @@ data class OrtRunStatistics(
     /** The number of issues found in the ORT run(s), or null if no jobs have finished yet. */
     val issuesCount: Long? = null,
 
+    /** The severity distribution of the issues, or null if no jobs have finished yet. */
+    //val issueSeverityCounts: Map<Severity, Long>? = null,
+
     /** The number of packages in the ORT run(s), or null in the case of no successful analyzer jobs. */
     val packagesCount: Long? = null,
 

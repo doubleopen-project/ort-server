@@ -282,7 +282,8 @@ fun Route.runs() = route("runs") {
                     val advisorJobInFinishedState = jobs?.advisor?.status in JobStatus.SUCCESSFUL_STATUSES
                     val evaluatorJobInFinishedState = jobs?.evaluator?.status in JobStatus.SUCCESSFUL_STATUSES
 
-                    val issuesCount = if (analyzerJobInFinalState) issueService.countForOrtRunId(ortRun.id) else null
+                    val issuesCount =
+                        if (analyzerJobInFinalState) issueService.countForOrtRunIds(listOf(ortRun.id)) else null
 
                     val packagesCount =
                         if (analyzerJobInFinishedState) packageService.countForOrtRunId(ortRun.id) else null

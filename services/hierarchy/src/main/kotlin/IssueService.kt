@@ -81,10 +81,12 @@ class IssueService(private val db: Database) {
         )
     }
 
-    suspend fun countForOrtRunId(ortRunId: Long): Long = db.dbQuery {
+    /** Count unique issues found in provided ORT runs. */
+    suspend fun countForOrtRunIds(ortRunIds: List<Long>): Long = db.dbQuery {
         OrtRunsIssuesTable
-            .select(OrtRunsIssuesTable.id)
-            .where { OrtRunsIssuesTable.ortRunId eq ortRunId }
+            .select(OrtRunsIssuesTable.issueId)
+            .where { OrtRunsIssuesTable.ortRunId inList ortRunIds }
+            .groupBy(OrtRunsIssuesTable.issueId)
             .count()
     }
 
