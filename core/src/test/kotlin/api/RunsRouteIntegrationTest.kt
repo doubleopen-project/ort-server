@@ -1664,8 +1664,7 @@ class RunsRouteIntegrationTest : AbstractIntegrationTest({
                 statistics.vulnerabilitiesCount shouldBe 1
                 statistics.ruleViolationsCount shouldBe 4
 
-                with(statistics.ecosystems) {
-                    shouldNotBeNull()
+                statistics.ecosystems.shouldNotBeNull {
                     shouldHaveSize(2)
                     first().name shouldBe "Maven"
                     first().count shouldBe 1
