@@ -501,9 +501,9 @@ val getOrtRunStatistics: OpenApiRoute.() -> Unit = {
                         ecosystems = listOf(
                             EcosystemStats("Maven", 20),
                             EcosystemStats("NPM", 145)
-                           ),
+                        ),
                         vulnerabilitiesCount = 3,
-                        ruleViolationsCount = 5,
+                        ruleViolationsCount = 5
                     )
                 }
             }
