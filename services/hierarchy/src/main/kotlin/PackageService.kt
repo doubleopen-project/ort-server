@@ -52,10 +52,12 @@ class PackageService(private val db: Database) {
         }
     }
 
-    suspend fun countForOrtRunId(ortRunId: Long): Long = db.dbQuery {
+    /** Count packages found in provided ORT runs. */
+    suspend fun countForOrtRunIds(ortRunIds: List<Long>): Long = db.dbQuery {
         PackagesTable.joinAnalyzerTables()
             .select(PackagesTable.id)
-            .where { AnalyzerJobsTable.ortRunId eq ortRunId }
+            .where { AnalyzerJobsTable.ortRunId inList ortRunIds }
+            .groupBy(PackagesTable.id)
             .count()
     }
 

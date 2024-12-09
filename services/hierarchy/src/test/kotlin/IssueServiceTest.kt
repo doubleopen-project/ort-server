@@ -57,7 +57,7 @@ class IssueServiceTest : WordSpec() {
             }
         }
 
-        "countForOrtRunId" should {
+        "countForOrtRunIds" should {
             "return issue count for ORT run" {
                 val service = IssueService(db)
                 val ortRun = fixtures.createOrtRun()
@@ -91,7 +91,73 @@ class IssueServiceTest : WordSpec() {
                     ).asPresent()
                 )
 
-                service.countForOrtRunId(ortRun.id) shouldBe 3
+                service.countForOrtRunIds(listOf(ortRun.id)) shouldBe 3
+            }
+
+            "return count of issues found in ORT runs" {
+                val service = IssueService(db)
+                val repositoryId = fixtures.createRepository().id
+
+                val identifier1 = Identifier("Maven", "com.example", "example", "1.0")
+                val identifier2 = Identifier("Maven", "com.example", "example2", "1.0")
+
+                val ortRun1Id = fixtures.createOrtRun(repositoryId = repositoryId).id
+
+                fixtures.ortRunRepository.update(
+                    ortRun1Id,
+                    issues = listOf(
+                        Issue(
+                            timestamp = Clock.System.now(),
+                            source = "Analyzer",
+                            message = "Issue",
+                            severity = Severity.ERROR,
+                            affectedPath = "path",
+                            identifier = identifier1
+                        ),
+                        Issue(
+                            timestamp = Clock.System.now(),
+                            source = "Scanner",
+                            message = "Issue",
+                            severity = Severity.WARNING,
+                            affectedPath = "path",
+                            identifier = identifier2
+                        )
+                    ).asPresent()
+                )
+
+                val ortRun2Id = fixtures.createOrtRun(repositoryId = repositoryId).id
+
+                fixtures.ortRunRepository.update(
+                    ortRun2Id,
+                    issues = listOf(
+                        Issue(
+                            timestamp = Clock.System.now(),
+                            source = "Analyzer",
+                            message = "Issue",
+                            severity = Severity.ERROR,
+                            affectedPath = "path",
+                            identifier = identifier1
+                        ),
+                        Issue(
+                            timestamp = Clock.System.now(),
+                            source = "Advisor",
+                            message = "Issue",
+                            severity = Severity.HINT,
+                            affectedPath = "path",
+                            identifier = Identifier("Maven", "com.example", "example", "1.0")
+                        ),
+                        Issue(
+                            timestamp = Clock.System.now(),
+                            source = "Evaluator",
+                            message = "Issue",
+                            severity = Severity.ERROR,
+                            affectedPath = "path",
+                            identifier = Identifier("Maven", "com.example", "example", "1.0")
+                        ),
+                    ).asPresent()
+                )
+
+                service.countForOrtRunIds(listOf(ortRun1Id, ortRun2Id)) shouldBe 5
             }
         }
     }

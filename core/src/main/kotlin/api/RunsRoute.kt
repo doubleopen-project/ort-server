@@ -282,10 +282,11 @@ fun Route.runs() = route("runs") {
                     val advisorJobInFinishedState = jobs?.advisor?.status in JobStatus.SUCCESSFUL_STATUSES
                     val evaluatorJobInFinishedState = jobs?.evaluator?.status in JobStatus.SUCCESSFUL_STATUSES
 
-                    val issuesCount = if (analyzerJobInFinalState) issueService.countForOrtRunId(ortRun.id) else null
+                    val issuesCount =
+                        if (analyzerJobInFinalState) issueService.countForOrtRunIds(listOf(ortRun.id)) else null
 
                     val packagesCount =
-                        if (analyzerJobInFinishedState) packageService.countForOrtRunId(ortRun.id) else null
+                        if (analyzerJobInFinishedState) packageService.countForOrtRunIds(listOf(ortRun.id)) else null
 
                     val ecosystems = if (analyzerJobInFinishedState) {
                         packageService.countEcosystemsForOrtRun(ortRun.id).map { ecosystemStats ->
@@ -296,7 +297,11 @@ fun Route.runs() = route("runs") {
                     }
 
                     val vulnerabilitiesCount =
-                        if (advisorJobInFinishedState) vulnerabilityService.countForOrtRunId(ortRun.id) else null
+                        if (advisorJobInFinishedState) {
+                            vulnerabilityService.countForOrtRunIds(listOf(ortRun.id))
+                        } else {
+                            null
+                        }
 
                     val ruleViolationsCount =
                         if (evaluatorJobInFinishedState) ruleViolationService.countForOrtRunId(ortRun.id) else null
