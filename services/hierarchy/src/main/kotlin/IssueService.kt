@@ -36,6 +36,7 @@ import org.eclipse.apoapsis.ortserver.model.util.OrderDirection.DESCENDING
 import org.eclipse.apoapsis.ortserver.model.util.OrderField
 
 import org.jetbrains.exposed.sql.Column
+import org.jetbrains.exposed.sql.Count
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.Query
@@ -87,6 +88,23 @@ class IssueService(private val db: Database) {
             .select(OrtRunsIssuesTable.id)
             .where { OrtRunsIssuesTable.ortRunId inList ortRunIds }
             .count()
+    }
+
+    suspend fun countIssuesBySeverityForOrtRunIds(ortRunIds: List<Long>): Map<Severity, Long> = db.dbQuery {
+        val countAlias = Count(OrtRunsIssuesTable.id, true)
+
+        val severityToCountMap = mutableMapOf<Severity, Long>()
+
+        OrtRunsIssuesTable
+            .innerJoin(IssuesTable)
+            .select(IssuesTable.severity, countAlias)
+            .where { OrtRunsIssuesTable.ortRunId inList ortRunIds }
+            .groupBy(IssuesTable.severity)
+            .map { row ->
+                severityToCountMap.put(row[IssuesTable.severity], row[countAlias])
+            }
+
+        severityToCountMap
     }
 
     private fun createOrtRunIssuesQuery(ortRunId: Long): Query {
