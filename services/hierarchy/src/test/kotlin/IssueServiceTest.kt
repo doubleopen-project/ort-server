@@ -20,6 +20,7 @@
 package org.eclipse.apoapsis.ortserver.services
 
 import io.kotest.core.spec.style.WordSpec
+import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.shouldBe
 
 import kotlinx.datetime.Clock
@@ -87,6 +88,48 @@ class IssueServiceTest : WordSpec() {
                 ).id
 
                 service.countForOrtRunIds(listOf(ortRun1Id, ortRun2Id)) shouldBe 7
+            }
+        }
+
+        "countIssuesBySeverityForOrtRunIds" should {
+            "return the counts per severity for issues found in ORT runs" {
+                val service = IssueService(db)
+                val repositoryId = fixtures.createRepository().id
+
+                val ortRun1Id = createOrtRunWithIssues(
+                    repositoryId,
+                    generateIssues().plus(
+                        Issue(
+                            timestamp = Clock.System.now(),
+                            source = "Evaluator",
+                            message = "Issue",
+                            severity = Severity.HINT,
+                            affectedPath = "path",
+                            identifier = Identifier("Maven", "com.example", "example", "1.0")
+                        )
+                    )
+                ).id
+                val ortRun2Id = createOrtRunWithIssues(
+                    repositoryId,
+                    generateIssues().plus(
+                        Issue(
+                            timestamp = Clock.System.now(),
+                            source = "Scanner",
+                            message = "Issue",
+                            severity = Severity.WARNING,
+                            affectedPath = "path",
+                            identifier = Identifier("Maven", "com.example", "example", "1.0")
+                        )
+                    )
+                ).id
+
+                val severitiesToCounts = service.countIssuesBySeverityForOrtRunIds(listOf(ortRun1Id, ortRun2Id))
+
+                severitiesToCounts.size shouldBe 3
+                severitiesToCounts.keys shouldContainExactlyInAnyOrder Severity.entries
+                severitiesToCounts[Severity.HINT] shouldBe 1
+                severitiesToCounts[Severity.WARNING] shouldBe 3
+                severitiesToCounts[Severity.ERROR] shouldBe 4
             }
         }
     }
