@@ -93,6 +93,7 @@ const columns = [
       );
     },
     enableSorting: false,
+    enableColumnFilter: false,
   }),
   columnHelper.accessor('severity', {
     header: 'Severity',
@@ -109,6 +110,7 @@ const columns = [
     sortingFn: (rowA, rowB) => {
       return compareSeverity(rowA.original.severity, rowB.original.severity);
     },
+    enableColumnFilter: false,
   }),
   columnHelper.accessor(
     (issue) => {
@@ -120,6 +122,7 @@ const columns = [
       cell: ({ row }) => {
         return <div className='font-semibold'>{row.getValue('package')}</div>;
       },
+      enableColumnFilter: false,
     }
   ),
   columnHelper.accessor('affectedPath', {
@@ -128,10 +131,12 @@ const columns = [
       <div className='break-all'>{row.original.affectedPath}</div>
     ),
     enableSorting: false,
+    enableColumnFilter: false,
   }),
   columnHelper.accessor('source', {
     header: 'Source',
     cell: ({ row }) => row.original.source,
+    enableColumnFilter: false,
   }),
 ];
 
