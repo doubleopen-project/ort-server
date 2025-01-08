@@ -33,6 +33,13 @@ const packageManagerOptionsSchema = z.object({
   options: z.array(keyValueSchema).optional(),
 });
 
+const reporterOptionsSchema = z.object({
+  options: z.object({
+    outputFileFormats: z.string().optional(),
+    templateIds: z.string().optional(),
+  }),
+});
+
 export const createRunFormSchema = z.object({
   revision: z.string(),
   path: z.string(),
@@ -95,6 +102,13 @@ export const createRunFormSchema = z.object({
     reporter: z.object({
       enabled: z.boolean(),
       formats: z.array(z.string()),
+      config: z
+        .object({
+          CycloneDX: reporterOptionsSchema,
+          SpdxDocument: reporterOptionsSchema,
+          PlainTextTemplate: reporterOptionsSchema,
+        })
+        .optional(),
     }),
     notifier: z.object({
       enabled: z.boolean(),
@@ -304,7 +318,7 @@ export function defaultValues(
       },
       reporter: {
         enabled: true,
-        formats: ['CycloneDx', 'SpdxDocument', 'WebApp'],
+        formats: ['CycloneDX', 'SpdxDocument', 'WebApp'],
       },
       notifier: {
         enabled: false,
@@ -401,8 +415,10 @@ export function defaultValues(
               ortRun.jobConfigs.reporter !== undefined &&
               ortRun.jobConfigs.reporter !== null,
             formats:
-              ortRun.jobConfigs.reporter?.formats ||
-              baseDefaults.jobConfigs.reporter.formats,
+              // Convert this to correct plugin configuration
+              ortRun.jobConfigs.reporter?.formats?.map((format) =>
+                format === 'CycloneDx' ? 'CycloneDX' : format
+              ) || baseDefaults.jobConfigs.reporter.formats,
           },
           notifier: {
             enabled:
@@ -539,6 +555,10 @@ export function formValuesToPayload(
     return Object.keys(options).length > 0 ? options : undefined;
   };
 
+  //
+  // Analyzer configuration
+  //
+
   // In ORT Server, running or not running a job for and ORT Run is decided
   // based on the presence or absence of the corresponding job configuration
   // in the request body. If a job is disabled in the UI, we pass "undefined"
@@ -562,12 +582,20 @@ export function formValuesToPayload(
     ),
   };
 
+  //
+  // Advisor configuration
+  //
+
   const advisorConfig = values.jobConfigs.advisor.enabled
     ? {
         skipExcluded: values.jobConfigs.advisor.skipExcluded,
         advisors: values.jobConfigs.advisor.advisors,
       }
     : undefined;
+
+  //
+  // Scanner configuration
+  //
 
   const scannerConfig = values.jobConfigs.scanner.enabled
     ? {
@@ -576,6 +604,10 @@ export function formValuesToPayload(
         skipExcluded: values.jobConfigs.scanner.skipExcluded,
       }
     : undefined;
+
+  //
+  // Evaluator configuration
+  //
 
   const evaluatorConfig = values.jobConfigs.evaluator.enabled
     ? {
@@ -592,11 +624,84 @@ export function formValuesToPayload(
       }
     : undefined;
 
+  //
+  // Reporter configuration
+  //
+
+  // Check if CycloneDX, SPDX, and/or NOTICE file reports are enabled in the form,
+  // and configure them to use all output formats, accordingly.
+
+  // Unfortunately, OpenAPI's PluginConfiguration always requires 'secrets' object,
+  // and it cannot be "undefined", so we need to pass in an empty secrets object instead,
+  // which produces an eslint error about empty object types allowing non-nullish values.
+
+  /* eslint-disable @typescript-eslint/no-empty-object-type */
+
+  const cycloneDxEnabled =
+    values.jobConfigs.reporter.formats.includes('CycloneDX');
+  const spdxDocumentEnabled =
+    values.jobConfigs.reporter.formats.includes('SpdxDocument');
+  const noticeFileEnabled =
+    values.jobConfigs.reporter.formats.includes('PlainTextTemplate');
+
+  const config: {
+    SpdxDocument?: {
+      options: {
+        outputFileFormats: string;
+      };
+      secrets: {};
+    };
+    CycloneDX?: {
+      options: {
+        outputFileFormats: string;
+      };
+      secrets: {};
+    };
+    PlainTextTemplate?: {
+      options: {
+        templateIds: string;
+      };
+      secrets: {};
+    };
+  } = {};
+
+  if (spdxDocumentEnabled) {
+    config.SpdxDocument = {
+      options: {
+        outputFileFormats: 'YAML,JSON',
+      },
+      secrets: {},
+    };
+  }
+
+  if (cycloneDxEnabled) {
+    config.CycloneDX = {
+      options: {
+        outputFileFormats: 'XML,JSON',
+      },
+      secrets: {},
+    };
+  }
+
+  if (noticeFileEnabled) {
+    config.PlainTextTemplate = {
+      options: {
+        templateIds: 'NOTICE_DEFAULT,NOTICE_SUMMARY',
+      },
+      secrets: {},
+    };
+  }
+
   const reporterConfig = values.jobConfigs.reporter.enabled
     ? {
         formats: values.jobConfigs.reporter.formats,
+        config: Object.keys(config).length > 0 ? config : undefined,
       }
     : undefined;
+
+  //
+  // Notifier configuration
+  //
 
   // Convert the recipient addresses back to an array of strings, as expected by the back-end.
   const addresses = values.jobConfigs.notifier.mail.recipientAddresses
@@ -641,6 +746,10 @@ export function formValuesToPayload(
         },
       }
     : undefined;
+
+  //
+  // Create the payload from worker configurations
+  //
 
   // Convert the parameters and labels arrays back to objects, as expected by the back-end.
   const parameters = values.jobConfigs.parameters
