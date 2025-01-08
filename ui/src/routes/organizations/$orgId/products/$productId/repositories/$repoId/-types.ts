@@ -146,16 +146,16 @@ export type PackageManager = (typeof packageManagers)[number]['id'];
 
 export const reportFormats = [
   {
-    id: 'CycloneDx',
-    label: 'CycloneDX SBOM',
+    id: 'CycloneDX',
+    label: 'CycloneDX SBOM (JSON and XML formats)',
   },
   {
     id: 'SpdxDocument',
-    label: 'SPDX Document',
+    label: 'SPDX SBOM (JSON and YAML formats)',
   },
   {
     id: 'PlainTextTemplate',
-    label: 'NOTICE file',
+    label: 'NOTICE file (DEFAULT and SUMMARY formats)',
   },
   {
     id: 'WebApp',
