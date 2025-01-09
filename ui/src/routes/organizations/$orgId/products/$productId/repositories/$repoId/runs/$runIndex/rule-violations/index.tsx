@@ -38,8 +38,6 @@ import {
 } from '@/api/queries/suspense';
 import { RuleViolation } from '@/api/requests';
 import { DataTable } from '@/components/data-table/data-table';
-import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
-import { FilterMultiSelect } from '@/components/data-table/filter-multi-select';
 import { LoadingIndicator } from '@/components/loading-indicator';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { Badge } from '@/components/ui/badge';
@@ -57,6 +55,7 @@ import { identifierToString } from '@/helpers/identifier-to-string';
 import { compareSeverity } from '@/helpers/sorting-functions';
 import { ALL_ITEMS } from '@/lib/constants';
 import {
+  packageIdentifierSearchParameterSchema,
   paginationSearchParameterSchema,
   severitySchema,
   severitySearchParameterSchema,
@@ -135,17 +134,42 @@ const RuleViolationsComponent = () => {
       sortingFn: (rowA, rowB) => {
         return compareSeverity(rowA.original.severity, rowB.original.severity);
       },
+      meta: {
+        filterVariant: 'select',
+        options: severitySchema.options.map((severity) => ({
+          label: severity,
+          value: severity,
+        })),
+        setSelected: (severities) => {
+          navigate({
+            search: {
+              ...search,
+              page: 1,
+              severity: severities.length === 0 ? undefined : severities,
+            },
+          });
+        },
+      },
     }),
     columnHelper.accessor(
       (ruleViolation) => {
         return identifierToString(ruleViolation.packageId);
       },
       {
+        id: 'packageIdentifier',
         header: 'Package',
         cell: ({ getValue }) => {
           return <div className='font-semibold'>{getValue()}</div>;
         },
-        enableColumnFilter: false,
+        enableColumnFilter: true,
+        meta: {
+          filterVariant: 'text',
+          setFilterValue: (value) => {
+            navigate({
+              search: { ...search, page: 1, packageIdentifier: value },
+            });
+          },
+        },
       }
     ),
     columnHelper.accessor('rule', {
@@ -176,9 +200,24 @@ const RuleViolationsComponent = () => {
     [search.severity]
   );
 
+  const packageIdentifier = useMemo(
+    () => (search.packageIdentifier ? search.packageIdentifier : undefined),
+    [search.packageIdentifier]
+  );
+
   const columnFilters = useMemo(
-    () => (severity ? [{ id: 'severity', value: severity }] : []),
-    [severity]
+    //() => (severity ? [{ id: 'severity', value: severity }] : []),
+    () => {
+      const filters = [];
+      if (severity) {
+        filters.push({ id: 'severity', value: severity });
+      }
+      if (packageIdentifier) {
+        filters.push({ id: 'packageIdentifier', value: packageIdentifier });
+      }
+      return filters;
+    },
+    [severity, packageIdentifier]
   );
   const sortBy = useMemo(
     () => (search.sortBy ? search.sortBy : undefined),
@@ -227,34 +266,6 @@ const RuleViolationsComponent = () => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <DataTableToolbar
-          filters={
-            <FilterMultiSelect
-              title='Rule Violation Severity'
-              options={severitySchema.options.map((severity) => ({
-                label: severity,
-                value: severity,
-              }))}
-              selected={severity || []}
-              setSelected={(severities) => {
-                navigate({
-                  search: {
-                    ...search,
-                    page: 1,
-                    severity: severities.length === 0 ? undefined : severities,
-                  },
-                });
-              }}
-            />
-          }
-          resetFilters={() => {
-            navigate({
-              search: { ...search, page: 1, severity: undefined },
-            });
-          }}
-          resetBtnVisible={severity !== undefined}
-          className='mb-2'
-        />
         <DataTable
           table={table}
           renderSubComponent={renderSubComponent}
@@ -279,6 +290,16 @@ const RuleViolationsComponent = () => {
               },
             };
           }}
+          resetFiltering={() => {
+            navigate({
+              search: {
+                ...search,
+                page: 1,
+                severity: undefined,
+                packageIdentifier: undefined,
+              },
+            });
+          }}
         />
       </CardContent>
     </Card>
@@ -290,6 +311,7 @@ export const Route = createFileRoute(
 )({
   validateSearch: paginationSearchParameterSchema
     .merge(severitySearchParameterSchema)
+    .merge(packageIdentifierSearchParameterSchema)
     .merge(sortingSearchParameterSchema),
   loader: async ({ context, params }) => {
     await prefetchUseRepositoriesServiceGetOrtRunByIndex(context.queryClient, {

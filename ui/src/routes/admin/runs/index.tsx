@@ -162,6 +162,22 @@ const RunsComponent = () => {
           {row.original.status}
         </Badge>
       ),
+      meta: {
+        filterVariant: 'select',
+        options: runStatusSchema.options.map((status) => ({
+          label: status,
+          value: status,
+        })),
+        setSelected: (statuses) => {
+          navigate({
+            search: {
+              ...search,
+              page: 1,
+              status: statuses.length === 0 ? undefined : statuses,
+            },
+          });
+        },
+      },
     }),
     columnHelper.display({
       id: 'jobStatuses',

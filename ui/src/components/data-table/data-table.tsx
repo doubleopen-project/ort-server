@@ -17,6 +17,7 @@
  * License-Filename: LICENSE
  */
 
+import { Cross2Icon } from '@radix-ui/react-icons';
 import { LinkOptions } from '@tanstack/react-router';
 import {
   GroupingState,
@@ -26,6 +27,7 @@ import {
 import React from 'react';
 
 import { DataTablePagination } from '@/components/data-table/data-table-pagination';
+import { Button } from '@/components/ui/button';
 import { Table } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { DataTableBody } from './data-table-body';
@@ -51,6 +53,7 @@ interface DataTableProps<TData> extends React.HTMLAttributes<HTMLDivElement> {
     desc: boolean | undefined; // For column removal to work when multisorting, this needed to be changed
   }) => LinkOptions;
   enableGrouping?: boolean;
+  resetFiltering?: () => void;
 }
 
 export function DataTable<TData>({
@@ -62,6 +65,7 @@ export function DataTable<TData>({
   setGroupingOptions,
   setSortingOptions,
   enableGrouping,
+  resetFiltering,
   ...props
 }: DataTableProps<TData>) {
   const pagination = table.getState().pagination;
@@ -74,6 +78,19 @@ export function DataTable<TData>({
       className={cn('w-full space-y-2.5 overflow-auto', className)}
       {...props}
     >
+      {resetFiltering && (
+        <div className='flex justify-end text-muted-foreground'>
+          <Button
+            variant='outline'
+            onClick={resetFiltering}
+            className='w-28 px-2'
+            disabled={table.getState().columnFilters.length === 0}
+          >
+            Clear filters
+            <Cross2Icon className='ml-2 h-4 w-4' />
+          </Button>
+        </div>
+      )}
       <Table>
         <DataTableHeader
           headerGroups={table.getHeaderGroups()}
