@@ -75,6 +75,7 @@ import org.eclipse.apoapsis.ortserver.api.v1.model.ScannerJob as ApiScannerJob
 import org.eclipse.apoapsis.ortserver.api.v1.model.ScannerJobConfiguration as ApiScannerJobConfiguration
 import org.eclipse.apoapsis.ortserver.api.v1.model.Secret as ApiSecret
 import org.eclipse.apoapsis.ortserver.api.v1.model.Severity as ApiSeverity
+import org.eclipse.apoapsis.ortserver.api.v1.model.ShortestDependencyPath as ApiShortestDependencyPath
 import org.eclipse.apoapsis.ortserver.api.v1.model.SortDirection as ApiSortDirection
 import org.eclipse.apoapsis.ortserver.api.v1.model.SortProperty as ApiSortProperty
 import org.eclipse.apoapsis.ortserver.api.v1.model.SourceCodeOrigin as ApiSourceCodeOrigin
@@ -133,8 +134,10 @@ import org.eclipse.apoapsis.ortserver.model.runs.Issue
 import org.eclipse.apoapsis.ortserver.model.runs.OrtRuleViolation
 import org.eclipse.apoapsis.ortserver.model.runs.Package
 import org.eclipse.apoapsis.ortserver.model.runs.PackageManagerConfiguration
+import org.eclipse.apoapsis.ortserver.model.runs.PackageWithShortestDependencyPath
 import org.eclipse.apoapsis.ortserver.model.runs.ProcessedDeclaredLicense
 import org.eclipse.apoapsis.ortserver.model.runs.RemoteArtifact
+import org.eclipse.apoapsis.ortserver.model.runs.ShortestDependencyPath
 import org.eclipse.apoapsis.ortserver.model.runs.VcsInfo
 import org.eclipse.apoapsis.ortserver.model.runs.advisor.Vulnerability
 import org.eclipse.apoapsis.ortserver.model.runs.advisor.VulnerabilityReference
@@ -791,3 +794,27 @@ fun ApiSubmoduleFetchStrategy.mapToModel() = when (this) {
     ApiSubmoduleFetchStrategy.TOP_LEVEL_ONLY -> SubmoduleFetchStrategy.TOP_LEVEL_ONLY
     ApiSubmoduleFetchStrategy.FULLY_RECURSIVE -> SubmoduleFetchStrategy.FULLY_RECURSIVE
 }
+
+fun ShortestDependencyPath.mapToApi() = ApiShortestDependencyPath(
+    scope = scope,
+    projectIdentifier = project.identifier.mapToApi(),
+    path = path.map { it.mapToApi() }
+)
+
+fun PackageWithShortestDependencyPath.mapToApi() = ApiPackage(
+    pkg.identifier.mapToApi(),
+    pkg.purl,
+    pkg.cpe,
+    pkg.authors,
+    pkg.declaredLicenses,
+    pkg.processedDeclaredLicense.mapToApi(),
+    pkg.description,
+    pkg.homepageUrl,
+    pkg.binaryArtifact.mapToApi(),
+    pkg.sourceArtifact.mapToApi(),
+    pkg.vcs.mapToApi(),
+    pkg.vcsProcessed.mapToApi(),
+    pkg.isMetadataOnly,
+    pkg.isModified,
+    shortestDependencyPath?.mapToApi()
+)

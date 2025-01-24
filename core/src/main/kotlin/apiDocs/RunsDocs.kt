@@ -47,6 +47,7 @@ import org.eclipse.apoapsis.ortserver.api.v1.model.RemoteArtifact
 import org.eclipse.apoapsis.ortserver.api.v1.model.RepositoryType
 import org.eclipse.apoapsis.ortserver.api.v1.model.RuleViolation
 import org.eclipse.apoapsis.ortserver.api.v1.model.Severity
+import org.eclipse.apoapsis.ortserver.api.v1.model.ShortestDependencyPath
 import org.eclipse.apoapsis.ortserver.api.v1.model.SortDirection
 import org.eclipse.apoapsis.ortserver.api.v1.model.SortProperty
 import org.eclipse.apoapsis.ortserver.api.v1.model.VcsInfo
@@ -396,6 +397,14 @@ val getPackagesByRunId: OpenApiRoute.() -> Unit = {
                                 vcsProcessed = VcsInfo(RepositoryType.GIT.name, "url", "revision", "path"),
                                 isMetadataOnly = false,
                                 isModified = false,
+                                shortestDependencyPath = ShortestDependencyPath(
+                                    scope = "productionRuntimeClasspath",
+                                    projectIdentifier = Identifier("Gradle", "", "project-name", "1.0"),
+                                    path = listOf(
+                                        Identifier("Maven", "org.namespace", "some", "1.0"),
+                                        Identifier("Maven", "org.namespace", "other", "1.0")
+                                    )
+                                )
                             )
                         ),
                         PagingData(

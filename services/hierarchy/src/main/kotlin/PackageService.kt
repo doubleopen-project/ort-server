@@ -25,10 +25,12 @@ import org.eclipse.apoapsis.ortserver.dao.repositories.analyzerrun.AnalyzerRunsT
 import org.eclipse.apoapsis.ortserver.dao.repositories.analyzerrun.PackageDao
 import org.eclipse.apoapsis.ortserver.dao.repositories.analyzerrun.PackagesAnalyzerRunsTable
 import org.eclipse.apoapsis.ortserver.dao.repositories.analyzerrun.PackagesTable
+import org.eclipse.apoapsis.ortserver.dao.repositories.analyzerrun.ShortestDependencyPathDao
+import org.eclipse.apoapsis.ortserver.dao.repositories.analyzerrun.ShortestDependencyPathsTable
 import org.eclipse.apoapsis.ortserver.dao.tables.shared.IdentifiersTable
 import org.eclipse.apoapsis.ortserver.dao.utils.listCustomQuery
 import org.eclipse.apoapsis.ortserver.model.EcosystemStats
-import org.eclipse.apoapsis.ortserver.model.runs.Package
+import org.eclipse.apoapsis.ortserver.model.runs.PackageWithShortestDependencyPath
 import org.eclipse.apoapsis.ortserver.model.util.ListQueryParameters
 import org.eclipse.apoapsis.ortserver.model.util.ListQueryResult
 
@@ -43,10 +45,11 @@ class PackageService(private val db: Database) {
     suspend fun listForOrtRunId(
         ortRunId: Long,
         parameters: ListQueryParameters = ListQueryParameters.DEFAULT
-    ): ListQueryResult<Package> = db.dbQuery {
-        PackageDao.listCustomQuery(parameters, ResultRow::toPackage) {
+    ): ListQueryResult<PackageWithShortestDependencyPath> = db.dbQuery {
+        PackageDao.listCustomQuery(parameters, ResultRow::toPackageWithShortestDependencyPath) {
             PackagesTable.joinAnalyzerTables()
-                .select(PackagesTable.columns)
+                .leftJoin(ShortestDependencyPathsTable)
+                .select(PackagesTable.columns + ShortestDependencyPathsTable.columns)
                 .where { AnalyzerJobsTable.ortRunId eq ortRunId }
         }
     }
@@ -78,7 +81,15 @@ class PackageService(private val db: Database) {
         }
 }
 
-private fun ResultRow.toPackage(): Package = PackageDao.wrapRow(this).mapToModel()
+private fun ResultRow.toPackageWithShortestDependencyPath(): PackageWithShortestDependencyPath =
+    PackageWithShortestDependencyPath(
+        pkg = PackageDao.wrapRow(this).mapToModel(),
+        shortestDependencyPath = if (getOrNull(ShortestDependencyPathsTable.id) != null) {
+            ShortestDependencyPathDao.wrapRow(this).mapToModel()
+        } else {
+            null
+        }
+    )
 
 private fun PackagesTable.joinAnalyzerTables() =
     innerJoin(PackagesAnalyzerRunsTable)
