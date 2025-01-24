@@ -31,6 +31,8 @@ import org.eclipse.apoapsis.ortserver.workers.common.mapToModel
 
 import org.jetbrains.exposed.sql.Database
 
+import org.ossreviewtoolkit.model.Identifier
+import org.ossreviewtoolkit.model.Project
 import org.ossreviewtoolkit.model.Severity
 
 import org.slf4j.LoggerFactory
@@ -97,9 +99,18 @@ internal class AnalyzerWorker(
                     "with '${analyzerRun.result.issues.values.size}' issues."
         )
 
+        val projectShortestPaths = mutableMapOf<Project, Map<String, Map<Identifier, List<Identifier>>>>()
+
+        analyzerRun.result.projects.forEach {
+            projectShortestPaths[it] = ortResult.dependencyNavigator.getShortestPaths(it)
+        }
+
         db.dbQuery {
             getValidAnalyzerJob(jobId)
-            ortRunService.storeAnalyzerRun(analyzerRun.mapToModel(jobId))
+            ortRunService.storeAnalyzerRun(
+                analyzerRun.mapToModel(jobId),
+                getIdentifierToShortestPathMap(projectShortestPaths)
+            )
         }
 
         if (analyzerRun.result.issues.values.flatten().any { it.severity >= Severity.WARNING }) {
