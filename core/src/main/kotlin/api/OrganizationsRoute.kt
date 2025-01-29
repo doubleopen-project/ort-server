@@ -34,6 +34,7 @@ import io.ktor.server.routing.route
 
 import org.eclipse.apoapsis.ortserver.api.v1.mapping.mapToApi
 import org.eclipse.apoapsis.ortserver.api.v1.mapping.mapToModel
+import org.eclipse.apoapsis.ortserver.api.v1.mapping.mapToOrgVulnerability
 import org.eclipse.apoapsis.ortserver.api.v1.model.CreateInfrastructureService
 import org.eclipse.apoapsis.ortserver.api.v1.model.CreateOrganization
 import org.eclipse.apoapsis.ortserver.api.v1.model.CreateProduct
@@ -57,6 +58,7 @@ import org.eclipse.apoapsis.ortserver.core.apiDocs.getOrganizations
 import org.eclipse.apoapsis.ortserver.core.apiDocs.getOrtRunStatisticsByOrganizationId
 import org.eclipse.apoapsis.ortserver.core.apiDocs.getSecretByOrganizationIdAndName
 import org.eclipse.apoapsis.ortserver.core.apiDocs.getSecretsByOrganizationId
+import org.eclipse.apoapsis.ortserver.core.apiDocs.getVulnerabilitiesByOrganizationId
 import org.eclipse.apoapsis.ortserver.core.apiDocs.patchInfrastructureServiceForOrganizationIdAndName
 import org.eclipse.apoapsis.ortserver.core.apiDocs.patchOrganizationById
 import org.eclipse.apoapsis.ortserver.core.apiDocs.patchSecretByOrganizationIdAndName
@@ -75,6 +77,7 @@ import org.eclipse.apoapsis.ortserver.core.utils.requireParameter
 import org.eclipse.apoapsis.ortserver.model.InfrastructureService
 import org.eclipse.apoapsis.ortserver.model.Product
 import org.eclipse.apoapsis.ortserver.model.Secret
+import org.eclipse.apoapsis.ortserver.model.VulnerabilityWithAccumulatedData
 import org.eclipse.apoapsis.ortserver.model.authorization.OrganizationPermission
 import org.eclipse.apoapsis.ortserver.services.InfrastructureServiceService
 import org.eclipse.apoapsis.ortserver.services.IssueService
@@ -461,6 +464,28 @@ fun Route.organizations() = route("organizations") {
                         )
                     )
                 }
+            }
+        }
+
+        route("vulnerabilities") {
+            get(getVulnerabilitiesByOrganizationId) {
+                requirePermission(OrganizationPermission.READ)
+
+                val orgId = call.requireIdParameter("organizationId")
+                val pagingOptions = call.pagingOptions(SortProperty("rating", SortDirection.DESCENDING))
+
+                val repositoryIds = organizationService.getRepositoryIdsForOrganization(orgId)
+
+                val ortRunIds = repositoryIds.mapNotNull { repositoryId ->
+                    repositoryService.getLatestOrtRunIdWithSuccessfulAdvisorJob(repositoryId)
+                }
+
+                val vulnerabilities =
+                    vulnerabilityService.listForOrtRuns(ortRunIds, pagingOptions.mapToModel())
+
+                val pagedResponse = vulnerabilities.mapToApi(VulnerabilityWithAccumulatedData::mapToOrgVulnerability)
+
+                call.respond(HttpStatusCode.OK, pagedResponse)
             }
         }
     }

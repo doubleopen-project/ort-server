@@ -51,6 +51,7 @@ import org.eclipse.apoapsis.ortserver.api.v1.model.NotifierJob as ApiNotifierJob
 import org.eclipse.apoapsis.ortserver.api.v1.model.NotifierJobConfiguration as ApiNotifierJobConfiguration
 import org.eclipse.apoapsis.ortserver.api.v1.model.OptionalValue as ApiOptionalValue
 import org.eclipse.apoapsis.ortserver.api.v1.model.Organization as ApiOrganization
+import org.eclipse.apoapsis.ortserver.api.v1.model.OrganizationVulnerability as ApiOrganizationVulnerability
 import org.eclipse.apoapsis.ortserver.api.v1.model.OrtRun as ApiOrtRun
 import org.eclipse.apoapsis.ortserver.api.v1.model.OrtRunFilters as ApiOrtRunFilters
 import org.eclipse.apoapsis.ortserver.api.v1.model.OrtRunStatus as ApiOrtRunStatus
@@ -773,6 +774,14 @@ fun EcosystemStats.mapToApi() = ApiEcosystemStats(name = name, count = count)
 fun VulnerabilityRating.mapToApi() = ApiVulnerabilityRating.valueOf(name)
 
 fun VulnerabilityWithAccumulatedData.mapToApi() = ApiProductVulnerability(
+    vulnerability = vulnerability.mapToApi(),
+    identifier = identifier.mapToApi(),
+    rating = rating.mapToApi(),
+    ortRunIds = ortRunIds,
+    repositoriesCount = repositoriesCount
+)
+
+fun VulnerabilityWithAccumulatedData.mapToOrgVulnerability() = ApiOrganizationVulnerability(
     vulnerability = vulnerability.mapToApi(),
     identifier = identifier.mapToApi(),
     rating = rating.mapToApi(),
