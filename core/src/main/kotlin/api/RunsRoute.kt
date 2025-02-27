@@ -104,7 +104,7 @@ fun Route.runs() = route("runs") {
         requireSuperuser()
 
         val pagingOptions = call.pagingOptions(SortProperty("createdAt", SortDirection.DESCENDING))
-        val filters = call.filters()
+        val filters = call.ortRunFilters()
 
         val ortRunsWithJobSummaries =
             ortRunService.listOrtRuns(
@@ -419,7 +419,7 @@ private fun ApplicationCall.status(): FilterOperatorAndValue<Set<OrtRunStatus>>?
 /**
  * Extract the filters for the run's endpoint from this [ApplicationCall].
  */
-private fun ApplicationCall.filters(): OrtRunFilters =
+private fun ApplicationCall.ortRunFilters(): OrtRunFilters =
     OrtRunFilters(
         status = status()
     )
