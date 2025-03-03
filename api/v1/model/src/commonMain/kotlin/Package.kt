@@ -39,3 +39,18 @@ data class Package(
     val isModified: Boolean = false,
     val shortestDependencyPaths: List<ShortestDependencyPath>
 )
+
+/**
+ * Object containing values to filter a packages listing with.
+ */
+@Serializable
+data class PackageFilters(
+    /** Substring filter for identifier. */
+    val identifier: FilterOperatorAndValue<String>? = null,
+
+    /** Substring filter for purl. */
+    val purl: FilterOperatorAndValue<String>? = null,
+
+    /** Set of SPDX license expressions to filter with. */
+    val processedDeclaredLicense: FilterOperatorAndValue<Set<String?>>? = null
+)
