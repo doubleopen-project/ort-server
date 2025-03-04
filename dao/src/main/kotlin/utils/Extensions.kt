@@ -39,8 +39,10 @@ import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.AbstractQuery
 import org.jetbrains.exposed.sql.Column
+import org.jetbrains.exposed.sql.ComparisonOp
 import org.jetbrains.exposed.sql.Expression
 import org.jetbrains.exposed.sql.Op
+import org.jetbrains.exposed.sql.QueryParameter
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SizedIterable
 import org.jetbrains.exposed.sql.SortOrder
@@ -54,6 +56,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.neq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.notInList
+import org.jetbrains.exposed.sql.TextColumnType
 
 /**
  * Transform the given column to an [EntityID] when creating a DAO object. This can be used for foreign key columns to
@@ -179,9 +182,14 @@ fun <T : Comparable<T>> Column<T>.applyFilter(operator: ComparisonOperator, valu
 /**
  * Apply the given [value] to filter this column by using the LIKE operator.
  */
-fun Column<String>.applyLike(value: String): Op<Boolean> {
-    return this like value
+fun Expression<String>.applyLike(value: String): Op<Boolean> {
+    return this like "%$value%"
 }
+
+class InsensitiveLikeOp(expr1: Expression<*>, expr2: Expression<*>) : ComparisonOp(expr1, expr2, "ILIKE")
+
+fun Expression<String>.applyILike(value: String): Op<Boolean> =
+    InsensitiveLikeOp(this, QueryParameter("%$value%", TextColumnType()))
 
 /**
  * Apply the given [operator] and filter [values] to filter this column by. This is an overload of the

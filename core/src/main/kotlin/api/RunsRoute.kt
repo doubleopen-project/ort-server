@@ -44,6 +44,7 @@ import org.eclipse.apoapsis.ortserver.api.v1.model.JobSummaries
 import org.eclipse.apoapsis.ortserver.api.v1.model.OrtRunFilters
 import org.eclipse.apoapsis.ortserver.api.v1.model.OrtRunStatistics
 import org.eclipse.apoapsis.ortserver.api.v1.model.OrtRunStatus
+import org.eclipse.apoapsis.ortserver.api.v1.model.PackageFilters
 import org.eclipse.apoapsis.ortserver.api.v1.model.SortDirection
 import org.eclipse.apoapsis.ortserver.api.v1.model.SortProperty
 import org.eclipse.apoapsis.ortserver.core.apiDocs.deleteOrtRunById
@@ -236,10 +237,14 @@ fun Route.runs() = route("runs") {
 
                     val pagingOptions = call.pagingOptions(SortProperty("purl", SortDirection.ASCENDING))
 
-                    val packagesForOrtRun = packageService
-                        .listForOrtRunId(ortRun.id, pagingOptions.mapToModel())
+                    val filters = call.packageFilters()
 
-                    val pagedResponse = packagesForOrtRun.mapToApi(PackageWithShortestDependencyPaths::mapToApi)
+                    val packagesForOrtRun = packageService
+                        .listForOrtRunId(ortRun.id, pagingOptions.mapToModel(), filters.mapToModel())
+
+                    val pagedResponse = packagesForOrtRun
+                        .mapToApi(PackageWithShortestDependencyPaths::mapToApi)
+                        .toSearchResponse(filters)
 
                     call.respond(HttpStatusCode.OK, pagedResponse)
                 }
@@ -422,6 +427,47 @@ private fun ApplicationCall.status(): FilterOperatorAndValue<Set<OrtRunStatus>>?
 private fun ApplicationCall.ortRunFilters(): OrtRunFilters =
     OrtRunFilters(
         status = status()
+    )
+
+private fun ApplicationCall.processedDeclaredLicense(): FilterOperatorAndValue<Set<String?>>? {
+    val parts = parameters["processedDeclaredLicense"]?.split(',').orEmpty()
+
+    if (parts.isEmpty()) return null
+
+    val operator = if (parts.first() == ("-")) ComparisonOperator.NOT_IN else ComparisonOperator.IN
+
+    val expressions = parts
+        .filter { it != "-" }
+        .map {
+            if (it == "null") {
+                null
+            } else {
+                it
+            }
+        }
+        .toSet()
+
+    return FilterOperatorAndValue(
+        operator,
+        expressions
+    )
+}
+
+private fun ApplicationCall.packageFilters(): PackageFilters =
+    PackageFilters(
+        identifier = parameters["identifier"]?.let {
+            FilterOperatorAndValue(
+                ComparisonOperator.LIKE,
+                it
+            )
+        },
+        purl = parameters["purl"]?.let {
+            FilterOperatorAndValue(
+                ComparisonOperator.LIKE,
+                it
+            )
+        },
+        processedDeclaredLicense = processedDeclaredLicense()
     )
 
 /**
