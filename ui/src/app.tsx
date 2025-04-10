@@ -95,6 +95,7 @@ export const App = () => {
   // Handle errors for the silent renew process
   useEffect(() => {
     const handleSilentRenewError = (error: Error) => {
+      console.log(error.message);
       if (error.message !== 'Token is not active') {
         // Retry silent signin after 3 seconds
         setTimeout(() => {
