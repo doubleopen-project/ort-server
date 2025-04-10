@@ -92,6 +92,28 @@ export const App = () => {
     }
   }, [auth.user]);
 
+  // Handle errors for the silent renew process
+  useEffect(() => {
+    const handleSilentRenewError = (error: Error) => {
+      if (error.message !== 'Token is not active') {
+        // Retry silent signin after 3 seconds
+        setTimeout(() => {
+          auth.refreshUser();
+        }, 3000);
+      } else {
+        auth.signinRedirect({ redirect_uri: window.location.href });
+      }
+    };
+
+    // Register the silent renew error handler
+    auth.events.addSilentRenewError(handleSilentRenewError);
+
+    return () => {
+      // Unregister the silent renew error handler on component unmount
+      auth.events.removeSilentRenewError(handleSilentRenewError);
+    };
+  }, [auth]);
+
   if (auth.isLoading) {
     return <LoadingIndicator />;
   }
