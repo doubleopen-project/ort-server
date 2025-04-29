@@ -17,41 +17,51 @@
  * License-Filename: LICENSE
  */
 
-import org.ossreviewtoolkit.utils.ort.Environment
+val disableDos = context.ortRun.jobConfigs.parameters["disableDos"].toBoolean()
 
-val defaultReportFormats = listOf(
-    "cyclonedx",
-    "ortresult",
-    "runstatistics",
-    "spdxdocument",
-    "webapp"
-)
-
-// Add default report formats in case no formats are specified.
-val resolvedReporterJobConfig = context.ortRun.jobConfigs.reporter?.let {
-    when {
-        it.formats.isEmpty() -> it.copy(formats = defaultReportFormats)
-        else -> it
-    }
-}
-
-// Disable the notifier job as the notifier-worker is currently not configured in Docker Compose.
-var resolvedJobConfigs = context.ortRun.jobConfigs.copy(reporter = resolvedReporterJobConfig, notifier = null)
-
-// Configure a version range for stored ScanCode results.
-context.ortRun.jobConfigs.scanner?.let { scannerJobConfig ->
-    val scanCodeConfig = (scannerJobConfig.config?.get("ScanCode") ?: PluginConfig(emptyMap(), emptyMap())).let {
-        it.copy(options = it.options + mapOf("minVersion" to "32.2.1", "maxVersion" to "33.0.0"))
-    }
-    val oldConfig = scannerJobConfig.config.orEmpty()
-    resolvedJobConfigs = resolvedJobConfigs.copy(
-        scanner = scannerJobConfig.copy(config = oldConfig + ("ScanCode" to scanCodeConfig))
-    )
-}
-
-validationResult = ConfigValidationResultSuccess(
-    resolvedConfigurations = resolvedJobConfigs,
-    labels = mapOf(
-        "createdBy" to "ORT Server $ORT_SERVER_VERSION running ORT ${Environment.ORT_VERSION} in Docker Compose."
+val defaultJobConfigs = context.ortRun.jobConfigs.copy(
+    analyzer = context.ortRun.jobConfigs.analyzer.copy(
+        packageCurationProviders = listOf(
+            ProviderPluginConfiguration(
+                type = "OrtConfig"
+            )
+        )
     )
 )
+
+val jobConfigs = defaultJobConfigs.takeIf { disableDos } ?: defaultJobConfigs.copy(
+    scanner = context.ortRun.jobConfigs.scanner?.copy(
+        scanners = listOf("DOS"),
+        config = mapOf(
+            "DOS" to PluginConfig(
+                options = mapOf(
+                    "readFromStorage" to "false",
+                    "writeToStorage" to "true",
+                    "url" to "http://api:3001/api/",
+                    "frontendUrl" to "http://localhost:3000/packages/",
+                    "pollInterval" to "5",
+                    "timeout" to "300",
+                ),
+                secrets = mapOf(
+                    "token" to "dosToken",
+                )
+            )
+        )
+    ),
+    evaluator = context.ortRun.jobConfigs.evaluator?.copy(
+        packageConfigurationProviders = listOf(
+            ProviderPluginConfiguration(
+                type = "DOS",
+                options = mapOf(
+                    "url" to "http://api:3001/api/",
+                    "timeout" to "300",
+                ),
+                secrets = mapOf(
+                    "token" to "dosToken",
+                )
+            )
+        )
+    )
+)
+
+validationResult = ConfigValidationResultSuccess(resolvedConfigurations = jobConfigs)

@@ -171,7 +171,12 @@ services:
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
       DB_SSL_MODE: disable
-      JWT_URI: "http://keycloak:8080/realms/master/protocol/openid-connect/certs"
+      JWT_URI: "http://auth:8080/realms/dos-dev/protocol/openid-connect/certs"
+      JWT_ISSUER: "http://localhost:8083/realms/dos-dev"
+      KEYCLOAK_ACCESS_TOKEN_URL: "http://auth:8080/realms/dos-dev/protocol/openid-connect/token"
+      KEYCLOAK_API_URL: "http://auth:8080/admin/realms/dos-dev"
+      KEYCLOAK_API_USER: "" # set to override the default value, needed so ORT Server uses client_credentials instead of password grant
+      KEYCLOAK_API_SECRET: "client-secret"
       ORCHESTRATOR_SENDER_TRANSPORT_TYPE: rabbitMQ
       ORCHESTRATOR_SENDER_TRANSPORT_SERVER_URI: "amqp://rabbitmq:5672"
       ORCHESTRATOR_SENDER_TRANSPORT_QUEUE_NAME: orchestrator_queue
@@ -557,6 +562,8 @@ services:
       - "8082:8080"
     environment:
       UI_API_URL: "http://localhost:${ORT_SERVER_CORE_PORT:-8080}"
+      UI_AUTHORITY: "http://localhost:8083/realms/dos-dev"
+      UI_CLIENT_ID: "ort-server-ui"
     logging:
       driver: gelf
       options:
