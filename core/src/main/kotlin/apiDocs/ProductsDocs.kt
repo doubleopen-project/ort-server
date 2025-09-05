@@ -289,6 +289,10 @@ val getVulnerabilitiesAcrossRepositoriesByProductId: RouteConfig.() -> Unit = {
         }
 
         standardListQueryParameters()
+
+        queryParameter<Boolean>("purlMode") {
+            description = ""
+        }
     }
 
     response {

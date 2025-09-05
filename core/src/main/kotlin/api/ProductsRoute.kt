@@ -231,7 +231,7 @@ fun Route.products() = route("products/{productId}") {
             }
 
             val vulnerabilities =
-                vulnerabilityService.listForOrtRuns(ortRunIds, pagingOptions.mapToModel())
+                vulnerabilityService.listForOrtRuns(ortRunIds, pagingOptions.mapToModel(), true)
 
             val pagedResponse = vulnerabilities.mapToApi(VulnerabilityWithAccumulatedData::mapToApi)
 

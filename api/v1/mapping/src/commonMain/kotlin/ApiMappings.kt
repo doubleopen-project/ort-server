@@ -778,7 +778,8 @@ fun VulnerabilityWithAccumulatedData.mapToApi() = ApiProductVulnerability(
     identifier = identifier.mapToApi(),
     rating = rating.mapToApi(),
     ortRunIds = ortRunIds,
-    repositoriesCount = repositoriesCount
+    repositoriesCount = repositoriesCount,
+    purl = purl
 )
 
 fun SubmoduleFetchStrategy.mapToApi() = when (this) {
