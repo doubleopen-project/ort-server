@@ -38,6 +38,7 @@ import org.eclipse.apoapsis.ortserver.workers.common.validateForProcessing
 import org.jetbrains.exposed.sql.Database
 
 import org.ossreviewtoolkit.model.Severity
+import org.ossreviewtoolkit.model.config.Resolutions
 
 import org.slf4j.LoggerFactory
 
@@ -109,7 +110,21 @@ internal class AnalyzerWorker(
                 envConfigFromJob,
                 repositoryServices
             )
-            val ortResult = runner.run(context, downloadResult.directory, jobConfiguration, resolvedEnvConfig)
+
+            /*
+            val dbResolutions = db.dbQuery {
+                Resolutions(
+                    vulnerabilities = UserVulnerabilityResolutionsTable.getForRepositoryId(repository.id)
+                ).mapToOrt()
+            }
+
+            println("####################################################3")
+            println(dbResolutions)
+            println("####################################################3")
+*/
+            val ortResult = runner.run(context, downloadResult.directory, jobConfiguration, resolvedEnvConfig,
+                Resolutions()
+            )
 
             ortRunService.storeRepositoryInformation(ortRun.id, ortResult.repository)
             ortRunService.storeResolvedPackageCurations(job.ortRunId, ortResult.resolvedConfiguration.packageCurations)

@@ -23,11 +23,14 @@ package org.eclipse.apoapsis.ortserver.core.api
 
 import io.github.smiley4.ktoropenapi.delete
 import io.github.smiley4.ktoropenapi.get
+import io.github.smiley4.ktoropenapi.post
 
 import io.ktor.http.ContentDisposition
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
+import io.ktor.server.auth.principal
+import io.ktor.server.request.receive
 import io.ktor.server.response.header
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondFile
@@ -50,6 +53,10 @@ import org.eclipse.apoapsis.ortserver.api.v1.model.OrtRunStatus
 import org.eclipse.apoapsis.ortserver.api.v1.model.PackageFilters
 import org.eclipse.apoapsis.ortserver.api.v1.model.RuleViolationFilters
 import org.eclipse.apoapsis.ortserver.api.v1.model.VulnerabilityFilters
+import org.eclipse.apoapsis.ortserver.components.authorization.OrtPrincipal
+import org.eclipse.apoapsis.ortserver.components.authorization.getFullName
+import org.eclipse.apoapsis.ortserver.components.authorization.getUserId
+import org.eclipse.apoapsis.ortserver.components.authorization.getUsername
 import org.eclipse.apoapsis.ortserver.components.authorization.permissions.RepositoryPermission
 import org.eclipse.apoapsis.ortserver.components.authorization.requirePermission
 import org.eclipse.apoapsis.ortserver.components.authorization.requireSuperuser
@@ -65,12 +72,15 @@ import org.eclipse.apoapsis.ortserver.core.apiDocs.getRunRuleViolations
 import org.eclipse.apoapsis.ortserver.core.apiDocs.getRunStatistics
 import org.eclipse.apoapsis.ortserver.core.apiDocs.getRunVulnerabilities
 import org.eclipse.apoapsis.ortserver.core.apiDocs.getRuns
+import org.eclipse.apoapsis.ortserver.core.apiDocs.postVulnerabilityResolution
 import org.eclipse.apoapsis.ortserver.core.utils.findByName
 import org.eclipse.apoapsis.ortserver.logaccess.LogFileService
+import org.eclipse.apoapsis.ortserver.model.CreateVulnerabilityResolutionDefinition
 import org.eclipse.apoapsis.ortserver.model.JobStatus
 import org.eclipse.apoapsis.ortserver.model.LogLevel
 import org.eclipse.apoapsis.ortserver.model.LogSource
 import org.eclipse.apoapsis.ortserver.model.OrtRun
+import org.eclipse.apoapsis.ortserver.model.UserDisplayName
 import org.eclipse.apoapsis.ortserver.model.VulnerabilityWithDetails
 import org.eclipse.apoapsis.ortserver.model.repositories.OrtRunRepository
 import org.eclipse.apoapsis.ortserver.model.runs.Issue
@@ -391,6 +401,36 @@ fun Route.runs() = route("runs") {
                     val pagedResponse = projectsForOrtRun.mapToApi(Project::mapToApi)
 
                     call.respond(HttpStatusCode.OK, pagedResponse)
+                }
+            }
+        }
+
+        route("vulnerability-resolutions") {
+            post(postVulnerabilityResolution) {
+                call.forRun(ortRunRepository) { ortRun ->
+                    requirePermission(RepositoryPermission.WRITE.roleName(ortRun.repositoryId))
+
+                    val createResolution = call.receive<org.eclipse.apoapsis.ortserver.api.v1.model.CreateVulnerabilityResolutionDefinition>()
+
+                    // Extract the user information from the principal.
+                    val userDisplayName = call.principal<OrtPrincipal>()?.let { principal ->
+                        UserDisplayName(principal.getUserId(), principal.getUsername(), principal.getFullName())
+                    }
+
+                    if (userDisplayName == null) throw NullPointerException("Unable to retrieve user information")
+
+                    vulnerabilityService.createVulnerabilityResolution(
+                        CreateVulnerabilityResolutionDefinition(
+                            ortRun.repositoryId,
+                            ortRun.id,
+                            createResolution.idMatchers,
+                            createResolution.reason,
+                            createResolution.comment,
+                            userDisplayName
+                        )
+                    )
+
+                    call.respond(HttpStatusCode.Created)
                 }
             }
         }

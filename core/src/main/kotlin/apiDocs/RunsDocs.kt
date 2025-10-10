@@ -28,6 +28,7 @@ import kotlin.time.Duration.Companion.minutes
 import org.eclipse.apoapsis.ortserver.api.v1.model.AdvisorCapability
 import org.eclipse.apoapsis.ortserver.api.v1.model.AdvisorDetails
 import org.eclipse.apoapsis.ortserver.api.v1.model.ComparisonOperator
+import org.eclipse.apoapsis.ortserver.api.v1.model.CreateVulnerabilityResolutionDefinition
 import org.eclipse.apoapsis.ortserver.api.v1.model.EcosystemStats
 import org.eclipse.apoapsis.ortserver.api.v1.model.FilterOperatorAndValue
 import org.eclipse.apoapsis.ortserver.api.v1.model.Identifier
@@ -716,6 +717,34 @@ val getRunPackageLicenses: RouteConfig.() -> Unit = {
                     )
                 }
             }
+        }
+    }
+}
+
+val postVulnerabilityResolution: RouteConfig.() -> Unit = {
+    operationId = "PostVulnerabilityResolution"
+    summary = "Add a vulnerability resolution"
+    tags = listOf("Runs")
+
+    request {
+        pathParameter<Long>("runId") {
+            description = "The ID of the ORT run."
+        }
+
+        jsonBody<CreateVulnerabilityResolutionDefinition> {
+            example("Create Vulnerability Resolution") {
+                value = CreateVulnerabilityResolutionDefinition(
+                    idMatchers = listOf(""),
+                    reason = "",
+                    comment = ""
+                )
+            }
+        }
+    }
+
+    response {
+        HttpStatusCode.Created to {
+            description = "Success"
         }
     }
 }
