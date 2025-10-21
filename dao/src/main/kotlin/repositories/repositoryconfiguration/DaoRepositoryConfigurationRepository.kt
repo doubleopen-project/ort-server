@@ -23,6 +23,8 @@ import org.eclipse.apoapsis.ortserver.dao.blockingQuery
 import org.eclipse.apoapsis.ortserver.dao.entityQuery
 import org.eclipse.apoapsis.ortserver.dao.mapAndDeduplicate
 import org.eclipse.apoapsis.ortserver.dao.repositories.ortrun.OrtRunDao
+import org.eclipse.apoapsis.ortserver.dao.tables.RepositoryConfigurationsVulnerabilityResolutionDefinitionsTable
+import org.eclipse.apoapsis.ortserver.dao.tables.VulnerabilityResolutionDefinitionsTable
 import org.eclipse.apoapsis.ortserver.dao.tables.shared.IdentifierDao
 import org.eclipse.apoapsis.ortserver.model.repositories.RepositoryConfigurationRepository
 import org.eclipse.apoapsis.ortserver.model.runs.repository.Curations
@@ -38,6 +40,8 @@ import org.eclipse.apoapsis.ortserver.model.runs.repository.RepositoryConfigurat
 import org.eclipse.apoapsis.ortserver.model.runs.repository.Resolutions
 
 import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.SizedCollection
+import org.jetbrains.exposed.sql.SizedIterable
 
 /**
  * An implementation of [RepositoryConfigurationRepository] that stores repository configurations in
@@ -55,7 +59,28 @@ class DaoRepositoryConfigurationRepository(private val db: Database) : Repositor
         licenseChoices: LicenseChoices,
         provenanceSnippetChoices: List<ProvenanceSnippetChoices>
     ): RepositoryConfiguration = db.blockingQuery {
-        RepositoryConfigurationDao.new {
+        val ortRun = OrtRunDao[ortRunId].mapToModel()
+        val vulnerabilityResolutions = mapAndDeduplicate(
+            resolutions.vulnerabilities,
+            VulnerabilityResolutionDao::getOrPut
+        )
+
+        val idToDbVulnerabilityResolutionDaos = VulnerabilityResolutionDefinitionsTable.getMapForRepositoryId(
+            ortRun.repositoryId
+        ).mapValues { entry ->
+            entry.value.map { vulnerabilityResolution ->
+                VulnerabilityResolutionDao.getOrPut(vulnerabilityResolution)
+            }
+        }
+
+        val combinedVulnerabilityResolutions: SizedIterable<VulnerabilityResolutionDao> = SizedCollection(
+            buildList {
+                addAll(vulnerabilityResolutions.toList())
+                addAll(idToDbVulnerabilityResolutionDaos.values.flatten())
+            }.distinctBy { it.id.value }
+        )
+
+        val repositoryConfiguration = RepositoryConfigurationDao.new {
             this.ortRun = OrtRunDao[ortRunId]
             this.repositoryAnalyzerConfiguration = analyzerConfig?.let {
                 RepositoryAnalyzerConfigurationDao.getOrPut(it)
@@ -66,8 +91,7 @@ class DaoRepositoryConfigurationRepository(private val db: Database) : Repositor
             this.issueResolutions = mapAndDeduplicate(resolutions.issues, IssueResolutionDao::getOrPut)
             this.ruleViolationResolutions =
                 mapAndDeduplicate(resolutions.ruleViolations, RuleViolationResolutionDao::getOrPut)
-            this.vulnerabilityResolutions =
-                mapAndDeduplicate(resolutions.vulnerabilities, VulnerabilityResolutionDao::getOrPut)
+            this.vulnerabilityResolutions = combinedVulnerabilityResolutions
             this.curations = mapAndDeduplicate(curations.packages, ::createPackageCuration)
             this.licenseFindingCurations =
                 mapAndDeduplicate(curations.licenseFindings, LicenseFindingCurationDao::getOrPut)
@@ -78,6 +102,18 @@ class DaoRepositoryConfigurationRepository(private val db: Database) : Repositor
                 mapAndDeduplicate(licenseChoices.packageLicenseChoices, ::createPackageLicenseChoice)
             this.provenanceSnippetChoices = mapAndDeduplicate(provenanceSnippetChoices, SnippetChoicesDao::getOrPut)
         }.mapToModel()
+
+        idToDbVulnerabilityResolutionDaos.forEach { (userVulnerabilityResolutionId, vulnerabilityResolutionDaoList) ->
+            vulnerabilityResolutionDaoList.forEach {
+                RepositoryConfigurationsVulnerabilityResolutionDefinitionsTable.insert(
+                    repositoryConfiguration.id,
+                    userVulnerabilityResolutionId,
+                    it.id.value
+                )
+            }
+        }
+
+        repositoryConfiguration
     }
 
     override fun get(id: Long): RepositoryConfiguration? = db.entityQuery {
