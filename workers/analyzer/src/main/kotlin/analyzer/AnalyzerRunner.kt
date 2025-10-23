@@ -44,6 +44,7 @@ import org.ossreviewtoolkit.model.OrtResult
 import org.ossreviewtoolkit.model.ResolvedPackageCurations
 import org.ossreviewtoolkit.model.config.AnalyzerConfiguration
 import org.ossreviewtoolkit.model.config.RepositoryConfiguration
+// import org.ossreviewtoolkit.model.config.Resolutions
 import org.ossreviewtoolkit.model.readValue
 import org.ossreviewtoolkit.model.readValueOrNull
 import org.ossreviewtoolkit.model.writeValue
@@ -71,6 +72,8 @@ class AnalyzerRunner(
 
         /** The name of the file to which an error is written in case the run fails. */
         private const val ANALYZER_ERROR_FILE = "analyzer-error.txt"
+
+        // private const val DB_RESOLUTIONS_FILE = "db-resolutions.yml"
 
         /**
          * The name of the property for the commands to launch a new JVM process. The property defines both the
@@ -120,10 +123,12 @@ class AnalyzerRunner(
                 val projectDir = File(args[1])
                 val configFile = exchangeDir.resolve(ANALYZER_CONFIG_FILE)
                 val resultFile = exchangeDir.resolve(ANALYZER_RESULT_FILE)
+                // val dbResolutionsFile = exchangeDir.resolve(DB_RESOLUTIONS_FILE)
 
                 val config = configFile.readValue<AnalyzerJobConfiguration>()
+                // val dbResolutions = dbResolutionsFile.readValue<Resolutions>()
                 val runner = AnalyzerRunner(ConfigFactory.empty())
-                val result = runner.runInProcess(projectDir, config)
+                val result = runner.runInProcess(projectDir, config/*, dbResolutions*/)
 
                 resultFile.writeValue(result)
             }.onFailure { exception ->
@@ -143,14 +148,15 @@ class AnalyzerRunner(
         inputDir: File,
         config: AnalyzerJobConfiguration,
         environmentConfig: ResolvedEnvironmentConfig
+        // dbResolutions: Resolutions
     ): OrtResult {
         val packageCurationProviderConfigs = context.resolveProviderPluginConfigSecrets(config.packageCurationProviders)
         val resolvedConfig = config.copy(packageCurationProviders = packageCurationProviderConfigs)
 
         return if (environmentConfig.environmentVariables.isEmpty()) {
-            runInProcess(inputDir, resolvedConfig)
+            runInProcess(inputDir, resolvedConfig/*, dbResolutions*/)
         } else {
-            runForked(context, inputDir, resolvedConfig, environmentConfig)
+            runForked(context, inputDir, resolvedConfig, environmentConfig/*, dbResolutions*/)
         }
     }
 
@@ -209,9 +215,11 @@ class AnalyzerRunner(
         inputDir: File,
         config: AnalyzerJobConfiguration,
         environmentConfig: ResolvedEnvironmentConfig
+        // dbResolutions: Resolutions
     ): OrtResult {
         val exchangeDir = context.createTempDir()
         exchangeDir.resolve(ANALYZER_CONFIG_FILE).writeValue(config)
+        // exchangeDir.resolve(DB_RESOLUTIONS_FILE).writeValue(dbResolutions)
 
         val processBuilder = createProcessBuilder(context, exchangeDir, inputDir, environmentConfig)
 
@@ -248,7 +256,11 @@ class AnalyzerRunner(
      * This function is used if no custom environment variables need to be set, and therefore, the Analyzer can be
      * invoked directly.
      */
-    internal fun runInProcess(inputDir: File, config: AnalyzerJobConfiguration): OrtResult {
+    internal fun runInProcess(
+        inputDir: File,
+        config: AnalyzerJobConfiguration/*,
+        dbResolutions: Resolutions*/
+    ): OrtResult {
         val ortPackageManagerOptions =
             config.packageManagerOptions?.map { entry -> entry.key to entry.value.mapToOrt() }?.toMap()
 
@@ -271,6 +283,13 @@ class AnalyzerRunner(
 
         val repositoryConfiguration = repositoryConfigFile.takeIf { it.isFile }?.readValueOrNull()
             ?: RepositoryConfiguration()
+        /*
+        val repositoryConfiguration = (
+                repositoryConfigFile.takeIf { it.isFile }?.readValueOrNull()
+                    ?: RepositoryConfiguration()
+                ).let { config ->
+                config.copy(resolutions = config.resolutions.merge(dbResolutions))
+            }*/
 
         val analyzerConfig = repositoryConfiguration.analyzer?.let { analyzerConfigFromJob.merge(it) }
             ?: analyzerConfigFromJob
