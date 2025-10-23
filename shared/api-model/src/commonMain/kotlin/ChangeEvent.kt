@@ -17,29 +17,32 @@
  * License-Filename: LICENSE
  */
 
-plugins {
-    // Apply precompiled plugins.
-    id("ort-server-kotlin-multiplatform-conventions")
-    id("ort-server-publication-conventions")
+package org.eclipse.apoapsis.ortserver.shared.apimodel
 
-    // Apply third-party plugins.
-    alias(libs.plugins.kotlinSerialization)
-}
+import kotlinx.datetime.Instant
 
-group = "org.eclipse.apoapsis.ortserver.shared"
+/**
+ * A change event performed by a user.
+ */
+@kotlinx.serialization.Serializable
+data class ChangeEvent(
+    /** The user who performed the change. */
+    val user: UserDisplayName,
 
-kotlin {
-    linuxX64()
-    macosArm64()
-    macosX64()
-    mingwX64()
+    /** The time the change occurred. */
+    val occurredAt: Instant,
 
-    sourceSets {
-        commonMain {
-            dependencies {
-                implementation(libs.kotlinxDatetime)
-                implementation(libs.kotlinxSerializationJson)
-            }
-        }
-    }
+    /** The action performed. */
+    val action: ChangeEventAction
+)
+
+/**
+ * An enumeration of the actions that can be performed, resulting in a [ChangeEvent].
+ */
+@kotlinx.serialization.Serializable
+enum class ChangeEventAction {
+    CREATE,
+    PATCH,
+    ARCHIVE,
+    RESTORE
 }

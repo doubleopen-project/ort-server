@@ -18,7 +18,6 @@
  */
 
 plugins {
-    // Apply precompiled plugins.
     id("ort-server-kotlin-multiplatform-conventions")
     id("ort-server-publication-conventions")
 
@@ -26,7 +25,7 @@ plugins {
     alias(libs.plugins.kotlinSerialization)
 }
 
-group = "org.eclipse.apoapsis.ortserver.shared"
+group = "org.eclipse.apoapsis.ortserver.components.resolutions"
 
 kotlin {
     linuxX64()
@@ -37,7 +36,8 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation(libs.kotlinxDatetime)
+                api(projects.shared.apiModel)
+
                 implementation(libs.kotlinxSerializationJson)
             }
         }
