@@ -26,7 +26,7 @@ import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
 
-/* 
+/*
  * A table to store change log entries representing user-performed change events.
  */
 object ChangeLogTable : Table("change_log") {
