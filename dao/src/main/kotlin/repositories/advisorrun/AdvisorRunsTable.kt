@@ -72,6 +72,7 @@ class AdvisorRunDao(id: EntityID<Long>) : LongEntity(id) {
             endTime = endTime,
             environment = environment.mapToModel(),
             config = advisorConfiguration.mapToModel(),
+            providerIssues = runIssues.filter { it.identifier == null }.toSet(),
             results = results.associate { it.mapToModel(runIssues) }
         )
     }
